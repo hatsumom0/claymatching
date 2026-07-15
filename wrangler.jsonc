@@ -5,6 +5,16 @@
   "main": "worker/claymatching.js",
   "compatibility_date": "2026-07-14",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "secrets": {
+    "required": [
+      "CLAYMATCHING_SESSION_SECRET",
+      "CLAYMATCHING_TURNSTILE_SECRET_KEY",
+      "HELIUS_API_KEY",
+      "SUPABASE_SECRET_KEY"
+    ]
+  },
   "routes": [
     {
       "pattern": "claymatching.luna21e8.xyz",
@@ -12,7 +22,7 @@
     }
   ],
   "assets": {
-    "directory": "./dist",
+    "directory": "./dist-claymatching",
     "binding": "ASSETS",
     "run_worker_first": ["/", "/api/*", "/relay", "/health", "/info"],
     "html_handling": "auto-trailing-slash",
@@ -38,7 +48,7 @@
     "SUI_GRAPHQL_URL": "https://graphql.mainnet.sui.io/graphql",
     "SUPABASE_URL": "https://jfpatuhroezchwjtsaga.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_DZP4Vq_sc2XsbKUdLlANqw_qehrgjj-",
-    "NOCTWEAVE_RELAY_OBJECT_NAME": "luna-default-relay",
+    "NOCTWEAVE_RELAY_OBJECT_NAME": "claymatching-relay",
     "NOCTWEAVE_RELAY_NAME": "Luna Claymatching Encrypted Relay",
     "NOCTWEAVE_RELAY_URL": "https://claymatching.luna21e8.xyz/relay",
     "NOCTWEAVE_FEDERATION_MODE": "solo",

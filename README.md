@@ -12,6 +12,10 @@ npm test
 npm run deploy:dry-run
 ```
 
+`npm run build` creates the standalone static bundle in `dist-claymatching/`. The
+Worker configuration points only at that directory; a generic `dist/` directory
+is never uploaded by this project.
+
 ## Supabase
 
 This repository's only database project is `claymatching-production` (`jfpatuhroezchwjtsaga`). Link and push from this repository root:
@@ -42,7 +46,7 @@ The production relay's identity is the combination of the owning Worker script, 
 - Standalone Worker script: `claymatching`
 - External namespace owner: `luna21e8` (interim compatibility dependency)
 - DO class: `LunaNoctweaveRelay` (legacy compatibility identifier)
-- DO object: `luna-default-relay`
+- DO object: `claymatching-relay`
 
 The standalone config intentionally has no Durable Object migration because it does not own that class yet. This preserves the current encrypted inbox namespace without risking replacement of the multi-product Worker. A planned namespace transfer is required before the legacy Worker can be retired. The only custom domain configured here is Claymatching.
 

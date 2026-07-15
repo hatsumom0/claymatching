@@ -32,6 +32,24 @@ const TEST_STAKING_INDEX_ID = `0x${"c".repeat(64)}`;
 const TEST_STAKED_POPKINS_INDEX_ID = `0x${"d".repeat(64)}`;
 const TEST_KIOSK_ID = `0x${"e".repeat(64)}`;
 
+test("standalone deployment uploads only Claymatching assets and preserves its relay namespace", async () => {
+  const [wranglerConfig, staticBuildScript, gitignore] = await Promise.all([
+    readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/prepare-static.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../.gitignore", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(wranglerConfig, /"directory"\s*:\s*"\.\/dist-claymatching"/);
+  assert.doesNotMatch(wranglerConfig, /"directory"\s*:\s*"\.\/dist"/);
+  assert.match(wranglerConfig, /"name"\s*:\s*"claymatching"/);
+  assert.match(wranglerConfig, /"script_name"\s*:\s*"luna21e8"/);
+  assert.match(wranglerConfig, /"NOCTWEAVE_RELAY_OBJECT_NAME"\s*:\s*"claymatching-relay"/);
+  assert.doesNotMatch(wranglerConfig, /"NOCTWEAVE_RELAY_OBJECT_NAME"\s*:\s*"luna-default-relay"/);
+  assert.match(staticBuildScript, /path\.join\(root, "dist-claymatching"\)/);
+  assert.doesNotMatch(staticBuildScript, /path\.join\(root, "dist"\)/);
+  assert.match(gitignore, /^\/dist-claymatching\/$/m);
+});
+
 function claymatchingConfiguredEnv(overrides = {}) {
   return {
     CLAYMATCHING_COLLECTION_IDS: COLLECTION,
@@ -100,7 +118,7 @@ test("only the Claymatching host can reach the Claymatching relay object", async
     body: JSON.stringify({ type: "ping" }),
   }), env);
   assert.equal(clayRelay.status, 200);
-  assert.deepEqual(await clayRelay.json(), { objectName: "luna-default-relay", type: "ok" });
+  assert.deepEqual(await clayRelay.json(), { objectName: "claymatching-relay", type: "ok" });
 
   const unrelatedRelay = await worker.fetch(new Request("https://luna21e8.xyz/relay", {
     method: "POST",
@@ -109,7 +127,7 @@ test("only the Claymatching host can reach the Claymatching relay object", async
   }), env);
   assert.equal(unrelatedRelay.status, 404);
   assert.deepEqual(relayCalls, [
-    { name: "luna-default-relay", type: "lookup" },
+    { name: "claymatching-relay", type: "lookup" },
     { host: "claymatching.luna21e8.xyz", type: "fetch" },
   ]);
 });

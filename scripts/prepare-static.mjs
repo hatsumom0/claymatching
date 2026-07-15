@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(root, "site");
-const outputRoot = path.join(root, "dist");
+const outputRoot = path.join(root, "dist-claymatching");
 
 const isDeployable = (source) => {
   const segments = path.relative(sourceRoot, source).split(path.sep);
@@ -34,4 +34,4 @@ async function copyTree(source, destination) {
 
 await rm(outputRoot, { recursive: true, force: true });
 await copyTree(sourceRoot, outputRoot);
-console.log("Claymatching static bundle staged in dist/.");
+console.log("Claymatching static bundle staged in dist-claymatching/.");

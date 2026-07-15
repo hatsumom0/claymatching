@@ -49,7 +49,7 @@ const DEFAULT_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DZP4Vq_sc2XsbKUdLlANqw_
 const SOLANA_ADDRESS_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 // Compatibility identifiers. Changing the class, namespace, or object name would orphan existing encrypted inboxes.
-const NOCTWEAVE_CLAYMATCHING_RELAY_OBJECT_NAME = "luna-default-relay";
+const NOCTWEAVE_CLAYMATCHING_RELAY_OBJECT_NAME = "claymatching-relay";
 const NOCTWEAVE_RELAY_VERSION = "luna-cloudflare-relay-1.0";
 const NOCTWEAVE_MAX_REQUEST_BYTES = 1_000_000;
 const NOCTWEAVE_MAX_MESSAGES_PER_INBOX = 250;
