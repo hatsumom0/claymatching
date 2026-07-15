@@ -2953,7 +2953,7 @@ async function handleNoctweaveRelayRequest(request, env, relayProfile) {
       });
     }
 
-    if (!env.NOCTWEAVE_RELAY) {
+    if (!env.NOCTWEAVE_RELAY || configuredNoctweaveRelayOwnerHost(env)) {
       return json(noctweaveRelayDirectoryResponse(env, relayProfile), 200, corsHeaders);
     }
 
@@ -2973,7 +2973,47 @@ async function handleNoctweaveRelayRequest(request, env, relayProfile) {
   }
 
   const stub = env.NOCTWEAVE_RELAY.getByName(relayProfile.objectName);
-  return stub.fetch(request);
+  const ownerHost = configuredNoctweaveRelayOwnerHost(env);
+  const relayRequest = ownerHost
+    ? noctweaveRelayOwnerRequest(request, ownerHost)
+    : request;
+  const response = await stub.fetch(relayRequest);
+  return ownerHost
+    ? withNoctweaveRelayCorsHeaders(response, corsHeaders)
+    : response;
+}
+
+function configuredNoctweaveRelayOwnerHost(env) {
+  const candidate = cleanRelayText(env.NOCTWEAVE_RELAY_OWNER_HOST, 253).toLowerCase();
+  if (!candidate) return "";
+
+  try {
+    const url = new URL(`https://${candidate}`);
+    return url.hostname === candidate && !url.port && url.pathname === "/" ? candidate : "";
+  } catch {
+    return "";
+  }
+}
+
+function noctweaveRelayOwnerRequest(request, ownerHost) {
+  const url = new URL(request.url);
+  url.hostname = ownerHost;
+  url.port = "";
+  return new Request(url, request);
+}
+
+function withNoctweaveRelayCorsHeaders(response, corsHeaders) {
+  const headers = new Headers(response.headers);
+  for (const name of [...headers.keys()]) {
+    if (name.toLowerCase().startsWith("access-control-")) headers.delete(name);
+  }
+  for (const [name, value] of Object.entries(corsHeaders)) headers.set(name, value);
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 function noctweaveRelayInfoResponse(env, relayProfile) {

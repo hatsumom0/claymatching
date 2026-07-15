@@ -54,6 +54,14 @@ The standalone config intentionally has no Durable Object migration because it d
 
 `npm run deploy` claims the live `claymatching.luna21e8.xyz` custom domain. Do not run it as an ordinary preview deploy.
 
+For isolated verification, use `npm run upload:preview`. It uploads a version with
+`wrangler.preview.jsonc`, which has no custom-domain route and recognizes only
+`claymatching.vfsp2wqysh.workers.dev`. Activate the returned version with
+`wrangler versions deploy`; do not run `wrangler triggers deploy` during preview testing.
+The preview config rewrites only the internal Durable Object request hostname to the
+current owner Worker, while the browser-facing relay endpoint remains on `workers.dev`.
+The production config does not enable this preview bridge.
+
 1. Deploy and verify the host-isolation patch on the current `luna21e8` Worker first.
 2. Run the Supabase dry run and confirm only Claymatching migrations are listed.
 3. Run `npm test` and `npm run deploy:dry-run` here.

@@ -1,0 +1,55 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+
+  "name": "claymatching",
+  "main": "worker/claymatching.js",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": true,
+  "secrets": {
+    "required": [
+      "CLAYMATCHING_SESSION_SECRET",
+      "CLAYMATCHING_TURNSTILE_SECRET_KEY",
+      "HELIUS_API_KEY",
+      "SUPABASE_SECRET_KEY"
+    ]
+  },
+  "assets": {
+    "directory": "./dist-claymatching",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/api/*", "/relay", "/health", "/info"],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NOCTWEAVE_RELAY",
+        "class_name": "LunaNoctweaveRelay",
+        "script_name": "luna21e8"
+      }
+    ]
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://claymatching.vfsp2wqysh.workers.dev",
+    "CLAYMATCHING_COLLECTION_IDS": "6mszaj17KSfVqADrQj3o4W3zoLMTykgmV37W4QadCczK,1yPMtWU5aqcF72RdyRD5yipmcMRC8NGNK59NvYubLkZ",
+    "CLAYMATCHING_HOSTS": "claymatching.vfsp2wqysh.workers.dev",
+    "SUI_GRAPHQL_URL": "https://graphql.mainnet.sui.io/graphql",
+    "SUPABASE_URL": "https://jfpatuhroezchwjtsaga.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_DZP4Vq_sc2XsbKUdLlANqw_qehrgjj-",
+    "NOCTWEAVE_RELAY_OBJECT_NAME": "claymatching-relay",
+    "NOCTWEAVE_RELAY_OWNER_HOST": "claymatching.luna21e8.xyz",
+    "NOCTWEAVE_RELAY_NAME": "Luna Claymatching Encrypted Relay",
+    "NOCTWEAVE_RELAY_URL": "https://claymatching.vfsp2wqysh.workers.dev/relay",
+    "NOCTWEAVE_FEDERATION_MODE": "solo",
+    "NOCTWEAVE_FEDERATION_NAME": "luna-claymatching",
+    "NOCTWEAVE_FEDERATION_FORWARDING_ENABLED": "false",
+    "NOCTWEAVE_FEDERATION_ALLOW_LIVE_REGISTRATION": "false",
+    "NOCTWEAVE_ALLOW_PRIVATE_FEDERATION_ENDPOINTS": "false"
+  }
+}

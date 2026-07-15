@@ -33,8 +33,9 @@ const TEST_STAKED_POPKINS_INDEX_ID = `0x${"d".repeat(64)}`;
 const TEST_KIOSK_ID = `0x${"e".repeat(64)}`;
 
 test("standalone deployment uploads only Claymatching assets and preserves its relay namespace", async () => {
-  const [wranglerConfig, staticBuildScript, gitignore] = await Promise.all([
+  const [wranglerConfig, previewConfig, staticBuildScript, gitignore] = await Promise.all([
     readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.preview.jsonc", import.meta.url), "utf8"),
     readFile(new URL("../scripts/prepare-static.mjs", import.meta.url), "utf8"),
     readFile(new URL("../.gitignore", import.meta.url), "utf8"),
   ]);
@@ -45,6 +46,15 @@ test("standalone deployment uploads only Claymatching assets and preserves its r
   assert.match(wranglerConfig, /"script_name"\s*:\s*"luna21e8"/);
   assert.match(wranglerConfig, /"NOCTWEAVE_RELAY_OBJECT_NAME"\s*:\s*"claymatching-relay"/);
   assert.doesNotMatch(wranglerConfig, /"NOCTWEAVE_RELAY_OBJECT_NAME"\s*:\s*"luna-default-relay"/);
+  assert.match(wranglerConfig, /"pattern"\s*:\s*"claymatching\.luna21e8\.xyz"/);
+  assert.match(previewConfig, /"workers_dev"\s*:\s*true/);
+  assert.doesNotMatch(previewConfig, /"routes"\s*:/);
+  assert.doesNotMatch(previewConfig, /"pattern"\s*:\s*"claymatching\.luna21e8\.xyz"/);
+  assert.match(previewConfig, /"CLAYMATCHING_HOSTS"\s*:\s*"claymatching\.vfsp2wqysh\.workers\.dev"/);
+  assert.match(previewConfig, /"script_name"\s*:\s*"luna21e8"/);
+  assert.match(previewConfig, /"NOCTWEAVE_RELAY_OBJECT_NAME"\s*:\s*"claymatching-relay"/);
+  assert.match(previewConfig, /"NOCTWEAVE_RELAY_OWNER_HOST"\s*:\s*"claymatching\.luna21e8\.xyz"/);
+  assert.doesNotMatch(wranglerConfig, /"NOCTWEAVE_RELAY_OWNER_HOST"/);
   assert.match(staticBuildScript, /path\.join\(root, "dist-claymatching"\)/);
   assert.doesNotMatch(staticBuildScript, /path\.join\(root, "dist"\)/);
   assert.match(gitignore, /^\/dist-claymatching\/$/m);
@@ -130,6 +140,65 @@ test("only the Claymatching host can reach the Claymatching relay object", async
     { name: "claymatching-relay", type: "lookup" },
     { host: "claymatching.luna21e8.xyz", type: "fetch" },
   ]);
+});
+
+test("workers.dev preview bridges only internal relay calls to the existing owner host", async () => {
+  const relayCalls = [];
+  const previewHost = "claymatching.vfsp2wqysh.workers.dev";
+  const ownerHost = "claymatching.luna21e8.xyz";
+  const env = claymatchingConfiguredEnv({
+    ALLOWED_ORIGINS: `https://${previewHost}`,
+    CLAYMATCHING_HOSTS: previewHost,
+    NOCTWEAVE_RELAY_OWNER_HOST: ownerHost,
+    NOCTWEAVE_RELAY_URL: `https://${previewHost}/relay`,
+    NOCTWEAVE_RELAY: {
+      getByName(name) {
+        relayCalls.push({ name, type: "lookup" });
+        return {
+          async fetch(request) {
+            const host = new URL(request.url).hostname;
+            relayCalls.push({ host, type: "fetch" });
+            if (host !== ownerHost) return new Response("Not found", { status: 404 });
+            return Response.json(
+              { objectName: name, type: "ok" },
+              { headers: { "Access-Control-Allow-Origin": `https://${ownerHost}` } },
+            );
+          },
+        };
+      },
+    },
+  });
+
+  const directory = await worker.fetch(new Request(`https://${previewHost}/api/noctweave/relays`, {
+    headers: { Origin: `https://${previewHost}` },
+  }), env);
+  assert.equal(directory.status, 200);
+  assert.equal(directory.headers.get("Access-Control-Allow-Origin"), `https://${previewHost}`);
+  assert.equal((await directory.json()).relays[0].endpoint.host, previewHost);
+  assert.deepEqual(relayCalls, []);
+
+  const relay = await worker.fetch(new Request(`https://${previewHost}/relay`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: `https://${previewHost}`,
+    },
+    body: JSON.stringify({ type: "health" }),
+  }), env);
+  assert.equal(relay.status, 200);
+  assert.equal(relay.headers.get("Access-Control-Allow-Origin"), `https://${previewHost}`);
+  assert.deepEqual(await relay.json(), { objectName: "claymatching-relay", type: "ok" });
+  assert.deepEqual(relayCalls, [
+    { name: "claymatching-relay", type: "lookup" },
+    { host: ownerHost, type: "fetch" },
+  ]);
+
+  const unrelated = await worker.fetch(new Request("https://preview.example/relay", {
+    method: "POST",
+    body: JSON.stringify({ type: "health" }),
+  }), env);
+  assert.equal(unrelated.status, 404);
+  assert.equal(relayCalls.length, 2);
 });
 
 function encodeBase58(bytes) {

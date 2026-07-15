@@ -12,6 +12,7 @@
     "test:claymatching": "node --test tests/claymatching-worker.test.mjs",
     "test:relay": "node --test tests/noctweave-relay.test.mjs tests/noctweave-upstream-compat.test.mjs",
     "test": "npm run test:claymatching && npm run test:relay",
+    "upload:preview": "npm run build && wrangler versions upload --config wrangler.preview.jsonc --strict",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "deploy": "npm run build && wrangler deploy"
   },
