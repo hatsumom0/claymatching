@@ -1,12 +1,14 @@
 # Vendored Noctweave OQS browser build
 
-These two production browser artifacts were copied unchanged from the Claymatching production source snapshot used for this standalone repository. The source repository did not record a reproducible upstream liboqs commit, Emscripten command line, or build provenance for this exact pair, so none is asserted here.
+The production browser artifacts are synced from official Noctweave revision `46eeabc9514f98a2bdd343c3248471662f8a0f3c` (2026-07-14), which upgraded liboqs to 0.16.0.
 
 SHA-256:
 
 ```text
 e344a80ec78a28c2f4dbe38825039a4fec576b0bb54c914c35c725f9493933b1  dist/noctweave_oqs.js
-eaa179f6e52e316537e4a442b267c68c5250df31028a8d324de359b670d3d113  dist/noctweave_oqs.wasm
+f20a490464bcee31bbd66d1e4978dea8a75bed9b84c88d794ea82a8045b6c4c4  dist/noctweave_oqs.wasm
 ```
 
-The files are retained byte-for-byte for compatibility with existing Claymatching browser identities and Noctweave messages. Replacing them requires cryptographic interoperability tests and a planned client migration. `LICENSE.liboqs.txt` contains the upstream liboqs license text retrieved from the official Open Quantum Safe repository.
+Claymatching's previous WASM is retained only as a test fixture. Automated tests prove that legacy signatures verify in the current module, current signatures verify in the legacy module, and ML-KEM encapsulation/decapsulation works in both directions. The legacy fixture is outside `site/` and is never deployed.
+
+`LICENSE.liboqs.txt` contains the liboqs license. The Noctweave Apache-2.0 license and NOTICE are one directory above.

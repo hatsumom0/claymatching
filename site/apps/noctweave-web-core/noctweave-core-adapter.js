@@ -1,3 +1,5 @@
+// Modified by Luna for Claymatching: account-bound identity storage, persistent
+// conversations, attachments, sender copies, and legacy relay URL migration.
 import oqsFactory from "./wasm/dist/noctweave_oqs.js";
 import {
   NoctweaveOQSWasmAdapter,
@@ -978,7 +980,7 @@ export function parseRelayEndpoint(value = "") {
 
   let endpoint;
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(input)) {
-    endpoint = parseNoctweaveRelayEndpoint(input);
+    endpoint = parseNoctweaveRelayEndpoint(normalizeLegacyRelayURL(input));
   } else {
     endpoint = parseNoctweaveRelayEndpoint(`https://${input}`);
   }
@@ -991,6 +993,16 @@ export function parseRelayEndpoint(value = "") {
     accountRelayUrl: input,
     isDefault: endpointsEqual(endpoint, DEFAULT_RELAY_ENDPOINT),
   };
+}
+
+function normalizeLegacyRelayURL(input) {
+  const url = new URL(input);
+  if (!url.username && !url.password && !url.search && !url.hash &&
+      /^\/relay\/?$/i.test(url.pathname)) {
+    url.pathname = "/";
+    return url.href;
+  }
+  return input;
 }
 
 export function relayEndpointToUrl(endpoint) {

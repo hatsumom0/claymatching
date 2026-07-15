@@ -1,3 +1,5 @@
+// Modified by Luna for Claymatching: generalized message bodies, attachment key
+// preparation, and persistent session compatibility are local extensions.
 import { base64, canonicalJsonBytes, swiftISODate, swiftUUID } from "./swift-canonical.js";
 
 const encoder = new TextEncoder();

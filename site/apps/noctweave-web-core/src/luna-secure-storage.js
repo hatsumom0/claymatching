@@ -1,3 +1,4 @@
+// Added by Luna for Claymatching: account-bound encrypted browser identity vault.
 const IDENTITY_ENVELOPE_VERSION = 1;
 const IDENTITY_AAD_PREFIX = "luna-noctweave-web-identity:v1:";
 const MESSAGE_KDF_V2 = "luna-noctweave-web-message-state:v2";

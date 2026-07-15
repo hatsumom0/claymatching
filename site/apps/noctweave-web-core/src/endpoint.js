@@ -9,7 +9,7 @@ export function parseRelayEndpoint(input, options = {}) {
   const defaultPort = Number(options.defaultPort ?? DEFAULT_TCP_PORT);
 
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
-    return parseURLRelayEndpoint(trimmed);
+    return parseURLRelayEndpoint(trimmed, defaultPort);
   }
 
   const parsed = parseHostPort(trimmed, defaultPort);
@@ -21,21 +21,48 @@ export function parseRelayEndpoint(input, options = {}) {
   };
 }
 
+export function normalizeRelayEndpoint(input, options = {}) {
+  if (typeof input === "string") {
+    return parseRelayEndpoint(input, options);
+  }
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("Relay endpoint must be a string or endpoint object.");
+  }
+  validateHost(input.host);
+  const port = parsePort(input.port);
+  if (typeof input.useTLS !== "boolean" || !["tcp", "http", "websocket"].includes(input.transport)) {
+    throw new TypeError("Relay endpoint object has an invalid transport profile.");
+  }
+  return {
+    host: input.host,
+    port,
+    useTLS: input.useTLS,
+    transport: input.transport
+  };
+}
+
 export function relayEndpointURL(endpoint, path = "/relay") {
-  const transport = endpoint.transport ?? "http";
+  const normalized = normalizeRelayEndpoint(endpoint);
+  if (typeof path !== "string" || !/^\/[A-Za-z0-9/_-]*$/.test(path)) {
+    throw new TypeError("Relay endpoint path is invalid.");
+  }
+  const transport = normalized.transport;
+  if (transport === "tcp") {
+    throw new TypeError("Raw TCP relay endpoints do not have an HTTP/WebSocket URL.");
+  }
   const scheme = transport === "websocket"
-    ? (endpoint.useTLS ? "wss" : "ws")
-    : (endpoint.useTLS ? "https" : "http");
-  const defaultPort = endpoint.useTLS ? 443 : 80;
-  const host = endpoint.host.includes(":") && !endpoint.host.startsWith("[")
-    ? `[${endpoint.host}]`
-    : endpoint.host;
-  const port = Number(endpoint.port);
+    ? (normalized.useTLS ? "wss" : "ws")
+    : (normalized.useTLS ? "https" : "http");
+  const defaultPort = normalized.useTLS ? 443 : 80;
+  const host = normalized.host.includes(":") && !normalized.host.startsWith("[")
+    ? `[${normalized.host}]`
+    : normalized.host;
+  const port = normalized.port;
   const portPart = port && port !== defaultPort ? `:${port}` : "";
   return `${scheme}://${host}${portPart}${path}`;
 }
 
-function parseURLRelayEndpoint(value) {
+function parseURLRelayEndpoint(value, configuredTCPPort) {
   const url = new URL(value);
   let transport;
   let useTLS;
@@ -65,12 +92,12 @@ function parseURLRelayEndpoint(value) {
   case "tcp:":
     transport = "tcp";
     useTLS = false;
-    defaultPort = DEFAULT_TCP_PORT;
+    defaultPort = configuredTCPPort;
     break;
   case "tls:":
     transport = "tcp";
     useTLS = true;
-    defaultPort = DEFAULT_TCP_PORT;
+    defaultPort = configuredTCPPort;
     break;
   default:
     throw new TypeError(`Unsupported relay endpoint protocol: ${url.protocol}`);
@@ -79,6 +106,19 @@ function parseURLRelayEndpoint(value) {
   if (!url.hostname) {
     throw new TypeError("Relay endpoint URL must include a host.");
   }
+  if (url.username || url.password) {
+    throw new TypeError("Relay endpoint URL cannot include user info.");
+  }
+  if (url.search) {
+    throw new TypeError("Relay endpoint URL cannot include query parameters.");
+  }
+  if (url.hash) {
+    throw new TypeError("Relay endpoint URL cannot include a fragment.");
+  }
+  if (url.pathname && url.pathname !== "/") {
+    throw new TypeError("Relay endpoint URL cannot include a path.");
+  }
+  validateHost(url.hostname);
 
   return {
     host: url.hostname,
@@ -95,6 +135,7 @@ function parseHostPort(value, defaultPort) {
       throw new TypeError("Invalid bracketed IPv6 relay endpoint.");
     }
     const host = value.slice(1, close);
+    validateHost(host);
     const rest = value.slice(close + 1);
     if (rest === "") {
       return { host, port: defaultPort };
@@ -107,12 +148,18 @@ function parseHostPort(value, defaultPort) {
 
   const lastColon = value.lastIndexOf(":");
   if (lastColon > -1 && value.indexOf(":") === lastColon) {
+    const host = value.slice(0, lastColon);
+    validateHost(host);
     return {
-      host: value.slice(0, lastColon),
+      host,
       port: parsePort(value.slice(lastColon + 1))
     };
   }
+  if (lastColon > -1) {
+    throw new TypeError("IPv6 relay endpoints must use brackets.");
+  }
 
+  validateHost(value);
   return { host: value, port: defaultPort };
 }
 
@@ -122,4 +169,13 @@ function parsePort(raw) {
     throw new TypeError(`Invalid relay port: ${raw}`);
   }
   return port;
+}
+
+function validateHost(host) {
+  if (typeof host !== "string" || host.length === 0 || host.trim() !== host) {
+    throw new TypeError("Relay endpoint must include a valid host.");
+  }
+  if (/\s|[/?#@]/u.test(host)) {
+    throw new TypeError("Relay endpoint must include a valid host.");
+  }
 }

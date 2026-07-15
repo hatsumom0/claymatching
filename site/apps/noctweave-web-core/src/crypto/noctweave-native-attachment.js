@@ -1,3 +1,4 @@
+// Added by Luna for Claymatching: bounded encrypted attachment chunks.
 import { base64 } from "./swift-canonical.js";
 
 const encoder = new TextEncoder();

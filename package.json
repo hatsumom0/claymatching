@@ -10,7 +10,7 @@
     "build": "npm run build:sui && npm run verify:assets && npm run build:static",
     "apple:secret": "node scripts/generate-apple-client-secret.mjs",
     "test:claymatching": "node --test tests/claymatching-worker.test.mjs",
-    "test:relay": "node --test tests/noctweave-relay.test.mjs",
+    "test:relay": "node --test tests/noctweave-relay.test.mjs tests/noctweave-upstream-compat.test.mjs",
     "test": "npm run test:claymatching && npm run test:relay",
     "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
     "deploy": "npm run build && wrangler deploy"
