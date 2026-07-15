@@ -1,6 +1,8 @@
 @font-face {
   font-family: "Clay Bubble";
-  src: url("/claymatching/fonts/TitanOne-Regular.ttf") format("truetype");
+  src:
+    url("/claymatching/fonts/TitanOne-Regular.woff2?v=20260714-1") format("woff2"),
+    url("/claymatching/fonts/TitanOne-Regular.ttf?v=20260714-1") format("truetype");
   font-display: swap;
   font-style: normal;
   font-weight: 400;
@@ -1190,13 +1192,13 @@ fieldset legend,
 @media (max-width: 570px) {
   .site-header { grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; }
   .brand { min-width: 0; gap: 7px; }
-  .brand b { font-size: 17px; white-space: nowrap; }
+  .brand b { font-size: 18px; white-space: nowrap; }
   .brand-mark { width: 34px; height: 34px; }
   .wallet-state { display: none; }
   .wallet-area { gap: 7px; }
   .wallet-area .clay-button { min-height: 44px; padding: 9px 12px; font-size: 12px; }
   .top-nav { width: calc(100% - 24px); justify-content: center; }
-  .nav-tab { min-height: 46px; flex: 1; padding: 11px 6px; font-size: 15px; }
+  .nav-tab { min-height: 46px; flex: 1; padding: 11px 6px; font-size: 16px; }
   .nav-tab span { top: -12px; right: 2px; }
   .welcome-strip, .app-shell { width: min(100% - 20px, 1440px); }
   .welcome-strip { margin-bottom: 40px; }

@@ -8,10 +8,19 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
     <link rel="icon" href="/claymatching/favicon.svg" type="image/svg+xml" />
     <title>Delete your Claymatching account</title>
+    <link
+      rel="preload"
+      href="/claymatching/fonts/TitanOne-Regular.woff2?v=20260714-1"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <style>
       @font-face {
         font-family: "Clay Bubble";
-        src: url("../fonts/TitanOne-Regular.ttf") format("truetype");
+        src:
+          url("/claymatching/fonts/TitanOne-Regular.woff2?v=20260714-1") format("woff2"),
+          url("/claymatching/fonts/TitanOne-Regular.ttf?v=20260714-1") format("truetype");
         font-display: swap;
       }
 
