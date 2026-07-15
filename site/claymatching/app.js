@@ -133,6 +133,8 @@ const profileAvatarButton = document.querySelector("[data-profile-avatar-button]
 const composerAvatar = document.querySelector("[data-composer-avatar]");
 const emailSigninForm = document.querySelector("[data-email-signin-form]");
 const emailOtpEntry = document.querySelector("[data-email-otp-entry]");
+const emailTurnstileHost = document.querySelector("[data-email-turnstile]");
+const emailTurnstileStatus = document.querySelector("[data-email-turnstile-status]");
 const verifyEmailCodeButton = document.querySelector("[data-verify-email-code]");
 const resetEmailCodeButton = document.querySelector("[data-reset-email-code]");
 const authEntryStatus = document.querySelector("[data-auth-entry-status]");
@@ -210,9 +212,12 @@ let selectedPostBackground = "dune";
 let replyTargetId = null;
 let pendingConsentSession = null;
 let captchaToken = "";
+let emailCaptchaToken = "";
 let consentErrorMessage = "";
 let consentSubmitting = false;
 let turnstileWidgetId;
+let emailTurnstileWidgetId;
+let emailTurnstileRenderPromise;
 let toastTimer;
 let signalCore;
 let signalIdentity;
@@ -1256,23 +1261,120 @@ async function signInWithApple() {
   }
 }
 
+function setEmailTurnstileStatus(message, { error = false } = {}) {
+  emailTurnstileStatus.textContent = message;
+  emailTurnstileStatus.classList.toggle("is-error", error);
+}
+
+async function waitForTurnstile(timeoutMs = 10_000) {
+  const startedAt = Date.now();
+  while (!window.turnstile && Date.now() - startedAt < timeoutMs) {
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+  }
+  return Boolean(window.turnstile);
+}
+
+async function renderEmailTurnstile() {
+  if (!emailTurnstileHost || emailTurnstileWidgetId !== undefined) return;
+  if (!emailTurnstileRenderPromise) {
+    emailTurnstileRenderPromise = createEmailTurnstile().finally(() => {
+      emailTurnstileRenderPromise = undefined;
+    });
+  }
+  return emailTurnstileRenderPromise;
+}
+
+async function createEmailTurnstile() {
+  if (!await waitForTurnstile()) {
+    setEmailTurnstileStatus("The human check did not load. Check content blockers and refresh.", { error: true });
+    return;
+  }
+
+  try {
+    emailTurnstileWidgetId = window.turnstile.render(emailTurnstileHost, {
+      sitekey: TURNSTILE_SITE_KEY,
+      action: "email_otp",
+      appearance: "interaction-only",
+      size: "compact",
+      theme: "light",
+      "response-field": false,
+      callback(token) {
+        emailCaptchaToken = token;
+        setEmailTurnstileStatus("Human check ready ✓");
+      },
+      "expired-callback"() {
+        emailCaptchaToken = "";
+        setEmailTurnstileStatus("The human check expired and is refreshing…");
+      },
+      "timeout-callback"() {
+        emailCaptchaToken = "";
+        setEmailTurnstileStatus("The human check timed out. Complete the refreshed check.", { error: true });
+      },
+      "error-callback"() {
+        emailCaptchaToken = "";
+        setEmailTurnstileStatus("The human check could not finish. Refresh and try again.", { error: true });
+      },
+    });
+  } catch {
+    emailTurnstileWidgetId = undefined;
+    setEmailTurnstileStatus("The human check could not start. Refresh and try again.", { error: true });
+  }
+}
+
+function resetEmailTurnstile() {
+  emailCaptchaToken = "";
+  setEmailTurnstileStatus("Refreshing the human check…");
+  if (!window.turnstile || emailTurnstileWidgetId === undefined) {
+    renderEmailTurnstile();
+    return;
+  }
+  try {
+    window.turnstile.reset(emailTurnstileWidgetId);
+  } catch {
+    emailTurnstileWidgetId = undefined;
+    emailTurnstileHost.replaceChildren();
+    renderEmailTurnstile();
+  }
+}
+
 async function requestEmailCode(event) {
   event.preventDefault();
   if (!emailSigninForm.reportValidity()) return;
+  if (!db) {
+    setAuthEntryStatus("Account service did not load. Refresh before requesting a code.", { error: true });
+    return;
+  }
+  if (!emailCaptchaToken) {
+    await renderEmailTurnstile();
+    setAuthEntryStatus("Complete the quick human check, then request the email code again.", { error: true });
+    return;
+  }
   const email = emailSigninForm.elements.email.value.trim().toLowerCase();
   const submitButton = emailSigninForm.querySelector('button[type="submit"]');
+  const captchaProof = emailCaptchaToken;
   setBusy(submitButton, true, "sending code…");
   setAuthEntryStatus("Sending a private one-time sign-in code…");
-  const { error } = await db.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: authRedirectUrl("email-signin"),
-      shouldCreateUser: true,
-    },
-  });
-  setBusy(submitButton, false);
+  let error;
+  try {
+    ({ error } = await db.auth.signInWithOtp({
+      email,
+      options: {
+        captchaToken: captchaProof,
+        emailRedirectTo: authRedirectUrl("email-signin"),
+        shouldCreateUser: true,
+      },
+    }));
+  } catch (requestError) {
+    error = requestError;
+  } finally {
+    resetEmailTurnstile();
+    setBusy(submitButton, false);
+  }
   if (error) {
-    setAuthEntryStatus(error.message || "That email could not receive a sign-in code.", { error: true });
+    const message = /captcha/i.test(error.message || "")
+      ? "The human check expired before Supabase accepted it. Complete the refreshed check and try again."
+      : error.message || "That email could not receive a sign-in code.";
+    setAuthEntryStatus(message, { error: true });
     return;
   }
   showEmailCodeEntry(email);
@@ -2304,11 +2406,7 @@ async function openConsentDialog({ session = null, message = "", activation = fa
 }
 
 async function renderTurnstile() {
-  const startedAt = Date.now();
-  while (!window.turnstile && Date.now() - startedAt < 10_000) {
-    await new Promise((resolve) => window.setTimeout(resolve, 100));
-  }
-  if (!window.turnstile) {
+  if (!await waitForTurnstile()) {
     setConsentStatus("The anti-bot check did not load. Check content blockers and refresh.", { error: true });
     return;
   }
@@ -4563,6 +4661,7 @@ document.addEventListener("keydown", (event) => {
 setView(storedView());
 updateWalletHeader();
 setHolderNavigationLocked(true);
+renderEmailTurnstile();
 try {
   const savedEmail = String(window.localStorage.getItem(EMAIL_OTP_STORAGE_KEY) || "").trim().toLowerCase();
   if (savedEmail) showEmailCodeEntry(savedEmail, { focus: false });

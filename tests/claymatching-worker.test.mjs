@@ -1465,6 +1465,8 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(html, /No password is ever created/);
   assert.match(html, /passkey-steps/);
   assert.match(html, /data-email-signin-form/);
+  assert.match(html, /data-email-turnstile/);
+  assert.match(html, /data-email-turnstile-status/);
   assert.match(html, /data-email-otp-entry/);
   assert.match(html, /data-verify-email-code/);
   assert.match(html, /autocomplete="one-time-code"/);
@@ -1536,6 +1538,31 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(styles, /\.profile-achievement-showcase\s*\{[^}]*display:\s*(?:grid|flex)[^}]*margin-top:/);
   assert.match(styles, /\.achievement-chip-showcase\s*\{[^}]*width:\s*100%[^}]*border:\s*2px solid var\(--ink\)/);
   assert.match(styles, /\.achievement-chip-showcase\[data-achievement-tone="(?:mint|sky|lavender|coral)"\]/);
+});
+
+test("claymatching email OTP uses its own single-use Turnstile proof", async () => {
+  const [html, script] = await Promise.all([
+    readFile(new URL("../site/claymatching/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../site/claymatching/app.js", import.meta.url), "utf8"),
+  ]);
+  const emailRequest = script.match(/async function requestEmailCode\(event\)[\s\S]*?(?=\nasync function verifyEmailCode)/)?.[0] || "";
+  const holderWidget = script.match(/async function renderTurnstile\(\)[\s\S]*?(?=\nasync function submitConsent)/)?.[0] || "";
+
+  assert.match(html, /data-email-turnstile/);
+  assert.match(script, /let emailCaptchaToken = ""/);
+  assert.match(script, /let emailTurnstileWidgetId/);
+  assert.match(script, /let emailTurnstileRenderPromise/);
+  assert.match(script, /if \(!emailTurnstileRenderPromise\)/);
+  assert.match(script, /emailTurnstileRenderPromise = createEmailTurnstile\(\)\.finally/);
+  assert.match(script, /action: "email_otp"/);
+  assert.match(script, /appearance: "interaction-only"/);
+  assert.match(script, /size: "compact"/);
+  assert.match(emailRequest, /const captchaProof = emailCaptchaToken/);
+  assert.match(emailRequest, /captchaToken: captchaProof/);
+  assert.match(emailRequest, /finally \{[\s\S]*resetEmailTurnstile\(\)/);
+  assert.match(script, /window\.turnstile\.reset\(emailTurnstileWidgetId\)/);
+  assert.match(holderWidget, /captchaToken = token/);
+  assert.doesNotMatch(holderWidget, /emailCaptchaToken/);
 });
 
 test("claymatching account-menu actions survive touch focus changes and transient asset refresh failures", async () => {
