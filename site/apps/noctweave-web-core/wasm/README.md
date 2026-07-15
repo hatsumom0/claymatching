@@ -1,6 +1,6 @@
 # Vendored Noctweave OQS browser build
 
-The production browser artifacts are synced from official Noctweave revision `46eeabc9514f98a2bdd343c3248471662f8a0f3c` (2026-07-14), which upgraded liboqs to 0.16.0.
+The production browser artifacts are byte-for-byte current with official Noctweave revision `b19046cc0e618842ffc0706fccb40f02e8098aeb` (2026-07-15). The binary upgrade remains liboqs 0.16.0; the later upstream revision added attribution metadata only.
 
 SHA-256:
 

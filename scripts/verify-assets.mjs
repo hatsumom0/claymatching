@@ -11,6 +11,7 @@ const htmlFiles = [
 ];
 const requiredRuntimeAssets = [
   "apps/noctweave-web-core/noctweave-core-adapter.js",
+  "apps/noctweave-web-core/NOTICE.noctweave-js.txt",
   "apps/noctweave-web-core/wasm/dist/noctweave_oqs.js",
   "apps/noctweave-web-core/wasm/dist/noctweave_oqs.wasm",
   "claymatching/sui-dist/sui-wallet.js",
