@@ -537,18 +537,30 @@ button { color: inherit; }
 
 .profile-art { position: relative; min-height: 276px; display: grid; place-items: center; overflow: visible; border-bottom: 1px solid var(--line); }
 .profile-art::before { content: ""; position: absolute; width: 150%; height: 80px; left: -20%; bottom: -44px; background: rgba(255, 253, 243, 0.4); border-radius: 50%; transform: rotate(-3deg); }
-.profile-avatar-button { position: relative; z-index: 1; display: grid; place-items: center; padding: 0; background: transparent; border: 0; border-radius: 48%; cursor: pointer; }
+.profile-avatar-cluster { position: relative; z-index: 1; width: 190px; height: 190px; display: grid; place-items: center; }
+.profile-avatar-button { position: relative; z-index: 1; width: 100%; height: 100%; display: grid; place-items: center; padding: 0; background: transparent; border: 0; border-radius: 48%; cursor: pointer; }
 .profile-art img { position: relative; z-index: 1; width: 190px; height: 190px; object-fit: cover; background: var(--paper); border: 6px solid var(--paper); border-radius: 43% 57% 52% 48% / 47% 42% 58% 53%; box-shadow: 0 9px 0 rgba(24, 55, 44, 0.15); transform: rotate(-2deg); }
 .profile-status { position: absolute; z-index: 2; right: 16px; top: 16px; display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; background: var(--paper); border: 2px solid var(--ink); border-radius: 999px; box-shadow: 0 3px 0 rgba(24, 55, 44, 0.16); font-size: 13px; font-weight: 850; line-height: 1; }
 .profile-status::before { content: ""; width: 9px; height: 9px; flex: 0 0 9px; background: #5aaa6d; border-radius: 50%; box-shadow: 0 0 0 3px rgba(90, 170, 109, 0.16); }
 
-.profile-notifications { position: absolute; z-index: 4; left: 16px; top: 15px; display: flex; gap: 8px; }
-.notification-badge { position: relative; min-width: 48px; height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 9px; border: 2px solid var(--paper); border-radius: 999px; box-shadow: 0 4px 0 var(--ink), 0 0 0 1px var(--ink); color: var(--ink); cursor: pointer; font-size: 17px; font-weight: 900; }
-.notification-badge b { min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 5px; background: var(--ink); border-radius: 999px; color: var(--paper); font-family: var(--font-display); font-size: 10px; font-weight: 400; line-height: 1; }
-.notification-mention { background: #ffd84d; }
-.notification-signal { background: var(--coral); }
-.notification-badge::after { content: attr(data-tooltip); position: absolute; z-index: 8; left: 0; top: calc(100% + 11px); width: max-content; max-width: 190px; padding: 8px 10px; background: var(--ink); border-radius: 9px; color: var(--cream); font-size: 10px; font-weight: 750; line-height: 1.3; opacity: 0; pointer-events: none; transform: translateY(-3px); transition: opacity 120ms ease, transform 120ms ease; }
-.notification-badge:hover::after, .notification-badge:focus-visible::after { opacity: 1; transform: translateY(0); }
+.profile-notifications { position: absolute; z-index: 5; left: -21px; top: -15px; }
+.notification-badge { position: relative; min-width: 54px; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 10px 8px; background: #ffd84d; border: 3px solid var(--paper); border-radius: 47% 53% 41% 59% / 58% 39% 61% 42%; box-shadow: 0 5px 0 var(--ink), 0 0 0 2px var(--ink); color: var(--ink); cursor: pointer; font-family: var(--font-display); font-size: 19px; font-weight: 400; line-height: 1; transform: rotate(-7deg); transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease; }
+.notification-badge.has-signals { background: var(--coral); }
+.notification-badge.has-board.has-signals { background: linear-gradient(135deg, #ffd84d 0 52%, var(--coral) 52% 100%); }
+.notification-badge:hover { filter: brightness(1.035); box-shadow: 0 6px 0 var(--ink), 0 0 0 2px var(--ink); transform: translateY(-2px) rotate(-4deg); }
+.notification-badge:focus-visible { outline: 3px solid var(--coral-deep); outline-offset: 5px; }
+.notification-badge b { min-width: 22px; height: 22px; display: grid; place-items: center; padding: 0 6px; background: var(--ink); border-radius: 44% 56% 48% 52% / 55% 43% 57% 45%; color: var(--paper); font-family: var(--font-display); font-size: 12px; font-weight: 400; line-height: 1; transform: rotate(5deg); }
+.notification-menu { position: fixed; z-index: 101; inset: auto; width: min(300px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); display: grid; gap: 7px; margin: 0; padding: 12px; overflow: auto; background: var(--paper); border: 2px solid var(--ink); border-radius: 20px 15px 22px 17px; box-shadow: 0 7px 0 var(--ink), 0 16px 38px rgba(12, 29, 23, 0.24); color: var(--ink); }
+.notification-menu > span { padding: 1px 5px 3px; color: var(--coral-deep); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.notification-menu > button { min-width: 0; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 10px; background: rgba(169, 216, 173, 0.24); border: 1px solid var(--line); border-radius: 14px 11px 16px 12px; color: var(--ink); text-align: left; cursor: pointer; }
+.notification-menu > button[data-notification-signals] { background: rgba(246, 128, 100, 0.19); }
+.notification-menu > button:hover { border-color: var(--ink); transform: translateY(-1px); }
+.notification-menu > button:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.notification-menu i { display: grid; width: 32px; height: 32px; place-items: center; background: var(--paper); border: 1px solid var(--ink); border-radius: 46% 54% 41% 59%; font-family: var(--font-display); font-size: 17px; font-style: normal; }
+.notification-menu button > span { min-width: 0; display: grid; gap: 2px; }
+.notification-menu button b { font-family: var(--font-display); font-size: 16px; font-weight: 400; line-height: 1.05; }
+.notification-menu button small { color: var(--ink-soft); font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; }
+.notification-menu button strong { min-width: 28px; height: 28px; display: grid; place-items: center; padding: 0 7px; background: var(--ink); border-radius: 48% 52% 43% 57%; color: var(--paper); font-family: var(--font-display); font-size: 12px; font-weight: 400; }
 
 .clay-avatar { position: relative; width: 124px; height: 112px; border: 4px solid rgba(24, 55, 44, 0.86); border-radius: 51% 49% 42% 58% / 51% 43% 57% 49%; box-shadow: inset -13px -10px 0 rgba(90, 42, 29, 0.12), 0 9px 0 rgba(24, 55, 44, 0.14); transform: rotate(-3deg); }
 .clay-avatar::before, .clay-avatar::after { content: ""; position: absolute; top: -23px; width: 37px; height: 48px; background: inherit; border: 4px solid rgba(24, 55, 44, 0.86); border-bottom: 0; border-radius: 70% 20% 0 0; }
@@ -1174,6 +1186,9 @@ fieldset legend,
   .profile-column { position: static; grid-template-columns: 1.2fr 0.8fr; }
   .profile-card { display: grid; grid-template-columns: 180px 1fr; }
   .profile-art { min-height: 100%; border: 0; border-right: 1px solid var(--line); }
+  .profile-avatar-cluster { width: 150px; height: 150px; }
+  .profile-notifications { left: 0; top: -12px; }
+  .profile-status { top: auto; right: 12px; bottom: 14px; }
   .profile-art img { width: 150px; height: 150px; }
   .little-note { align-self: center; }
   .signal-guardrails { grid-template-columns: 1fr; }
@@ -1231,6 +1246,9 @@ fieldset legend,
   .profile-column { grid-template-columns: 1fr; }
   .profile-card { display: block; }
   .profile-art { min-height: 176px; border: 0; border-bottom: 1px solid var(--line); }
+  .profile-avatar-cluster { width: 138px; height: 138px; }
+  .profile-notifications { left: -17px; top: -12px; }
+  .profile-status { top: 16px; right: 16px; bottom: auto; }
   .profile-art img { width: 138px; height: 138px; }
   .profile-body { padding: 23px; }
   .profile-body h2 { font-size: 34px; }

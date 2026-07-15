@@ -188,6 +188,40 @@ export async function saveSignalMessageLog({
   return state.messages;
 }
 
+export async function markSignalMessagesRead({
+  accountId,
+  accountHandle,
+  displayName,
+  signalContactCode = "",
+  messageIds = [],
+} = {}) {
+  assertWebCoreAvailable();
+
+  const record = await readVerifiedIdentityRecord({
+    accountId,
+    accountHandle,
+    displayName,
+    signalContactCode,
+  });
+  const state = await loadSignalEnvelopeState(record);
+  const ids = new Set((Array.isArray(messageIds) ? messageIds : [messageIds])
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean));
+
+  if (!ids.size) return state.messages;
+  let changed = false;
+  state.messages = normalizeSignalMessages(state.messages.map((message) => {
+    const candidates = [message.id, message.envelopeId, ...(message.envelopeIds || [])]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+    if (!message.unread || !candidates.some((candidate) => ids.has(candidate))) return message;
+    changed = true;
+    return { ...message, unread: false };
+  }));
+  if (changed) await saveSignalEnvelopeState(record, state);
+  return state.messages;
+}
+
 export async function appendSignalMessageLogEntry({
   accountId,
   accountHandle,
@@ -1013,6 +1047,17 @@ export function decodeContactCode(contactCode) {
   return decodeNativeContactCode(String(contactCode || "").trim());
 }
 
+export async function verifySignalContactCode(contactCode) {
+  assertWebCoreAvailable();
+  const runtime = await nativeRuntime();
+  const offer = decodeNativeContactCode(String(contactCode || "").trim());
+  await verifyNativeContactOffer({ crypto: runtime.crypto, pqc: runtime.pqc, offer });
+  return {
+    displayName: String(offer.displayName || ""),
+    fingerprint: String(offer.fingerprint || ""),
+  };
+}
+
 async function nativeRuntime() {
   if (!runtimePromise) {
     runtimePromise = (async () => ({
@@ -1187,7 +1232,10 @@ async function decodeSignalEnvelope({ runtime, record, state, envelope }) {
     message,
     timestamp: envelope.sentAt || "just now",
     createdAt: envelope.sentAt || iso8601NoMilliseconds(),
-    unread: direction === "inbox",
+    // Every decoded envelope arrived from the relay. The application can
+    // identify encrypted copies from the user's other verified devices and
+    // suppress those without trusting a sender-chosen display name.
+    unread: true,
     direction,
     deliveryState: direction === "inbox" ? "received" : "sent",
     contactFingerprint: contact.fingerprint,

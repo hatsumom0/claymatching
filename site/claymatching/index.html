@@ -17,7 +17,7 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/claymatching/styles.css?v=20260715-3" />
+    <link rel="stylesheet" href="/claymatching/styles.css?v=20260715-5" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">skip to the board</a>
@@ -200,22 +200,46 @@
         <aside class="profile-column">
           <article class="profile-card" data-profile-card data-background="dune">
             <div class="profile-art" data-profile-art>
-              <div class="profile-notifications" data-profile-notifications aria-label="Unread notifications">
-                <button class="notification-badge notification-mention" data-mention-notifications type="button" data-tooltip="New tags and replies" aria-label="Open new tags and replies" hidden>
-                  <span aria-hidden="true">@</span><b data-mention-notification-count>0</b>
-                </button>
-                <button class="notification-badge notification-signal" data-signal-notifications type="button" data-tooltip="New private signals" aria-label="Open new private signals" hidden>
-                  <span aria-hidden="true">☽</span><b data-signal-notification-count>0</b>
+              <div class="profile-avatar-cluster">
+                <div class="profile-notifications" data-profile-notifications aria-label="Unread notifications">
+                  <span class="sr-only" data-notification-live role="status" aria-live="polite" aria-atomic="true"></span>
+                  <button
+                    class="notification-badge"
+                    data-notification-badge
+                    data-achievement-tooltip="notifications"
+                    data-tooltip="Unread notifications"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-controls="profile-notification-menu"
+                    aria-expanded="false"
+                    aria-label="Open unread notifications"
+                    hidden
+                  >
+                    <span aria-hidden="true">✦</span><b data-notification-count>0</b>
+                  </button>
+                  <div class="notification-menu" id="profile-notification-menu" data-notification-menu role="menu" aria-label="Unread notification destinations" popover="manual" hidden>
+                    <span>fresh from the mud</span>
+                    <button data-notification-board type="button" role="menuitem" hidden>
+                      <i aria-hidden="true">↳</i>
+                      <span><b>board replies + tags</b><small data-notification-board-summary>From another creature</small></span>
+                      <strong data-notification-board-count>0</strong>
+                    </button>
+                    <button data-notification-signals type="button" role="menuitem" hidden>
+                      <i aria-hidden="true">☽</i>
+                      <span><b>private Signals</b><small data-notification-signal-summary>From a mutual</small></span>
+                      <strong data-notification-signal-count>0</strong>
+                    </button>
+                  </div>
+                </div>
+                <button class="profile-avatar-button" data-profile-avatar-button type="button" aria-label="Open your profile">
+                  <span class="clay-avatar avatar-coral" data-profile-fallback aria-label="Original demo clay shape">
+                    <span class="clay-eye eye-one"></span>
+                    <span class="clay-eye eye-two"></span>
+                    <span class="clay-smile"></span>
+                  </span>
+                  <img data-profile-image alt="" hidden />
                 </button>
               </div>
-              <button class="profile-avatar-button" data-profile-avatar-button type="button" aria-label="Open your profile">
-                <span class="clay-avatar avatar-coral" data-profile-fallback aria-label="Original demo clay shape">
-                  <span class="clay-eye eye-one"></span>
-                  <span class="clay-eye eye-two"></span>
-                  <span class="clay-smile"></span>
-                </span>
-                <img data-profile-image alt="" hidden />
-              </button>
               <span class="profile-status">online-ish</span>
             </div>
             <div class="profile-body">
@@ -244,7 +268,7 @@
           <header class="section-heading">
             <div>
               <span class="eyebrow">the communal puddle</span>
-              <h2>Board chatter</h2>
+              <h2 data-board-heading tabindex="-1">Board chatter</h2>
             </div>
             <div class="live-pill" data-live-count><i></i> holder board warming up</div>
           </header>
@@ -295,7 +319,7 @@
           <header class="section-heading">
             <div>
               <span class="eyebrow">sealed under the moon</span>
-              <h2>Private signals</h2>
+              <h2 data-signals-heading tabindex="-1">Private signals</h2>
             </div>
             <span class="encrypted-pill" aria-label="Relay live, end-to-end encrypted">RELAY LIVE - END TO END ENCRYPTED</span>
           </header>
@@ -647,6 +671,6 @@
       crossorigin="anonymous"
     ></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-    <script type="module" src="/claymatching/app.js?v=20260715-2"></script>
+    <script type="module" src="/claymatching/app.js?v=20260715-5"></script>
   </body>
 </html>

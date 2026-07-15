@@ -8,6 +8,7 @@ const DEVICE_STORAGE_KEY = "claymatching.signal-device.v1";
 const AUTH_RETURN_STORAGE_KEY = "claymatching.auth-return.v1";
 const EMAIL_OTP_STORAGE_KEY = "claymatching.email-otp.v1";
 const SIGNAL_SEEN_STORAGE_PREFIX = "claymatching.signal-seen.v1";
+const SIGNAL_IDENTITY_DISPLAY_PREFIX = "claymatching:v1:";
 const NOTIFICATION_REFRESH_MS = 60_000;
 const SIGNAL_RELAY_URL = new URL("/relay", window.location.href).href;
 const CLAY_COLLECT_ORIGIN = "https://collect.claynosaurz.com";
@@ -105,11 +106,13 @@ const replyContext = document.querySelector("[data-reply-context]");
 const replyContextCopy = document.querySelector("[data-reply-context-copy]");
 const achievementTooltip = document.querySelector("[data-achievement-tooltip-layer]");
 const feed = document.querySelector("[data-feed]");
+const boardHeading = document.querySelector("[data-board-heading]");
 const matchingGrid = document.querySelector("[data-matching-grid]");
 const matchingFilter = document.querySelector("[data-matching-filter]");
 const peopleStack = document.querySelector("[data-people-stack]");
 const liveCount = document.querySelector("[data-live-count]");
 const signalStatus = document.querySelector("[data-signal-status]");
+const signalsHeading = document.querySelector("[data-signals-heading]");
 const signalsIntro = document.querySelector("[data-signals-intro]");
 const signalsLock = document.querySelector("[data-signals-lock]");
 const openWalletLinksButton = document.querySelector("[data-open-wallet-links]");
@@ -183,10 +186,17 @@ const achievementDialogStatus = document.querySelector("[data-achievement-status
 const achievementDialogGrid = document.querySelector("[data-achievement-grid]");
 const achievementDialogSource = document.querySelector("[data-achievement-source]");
 const mudprintLinkStatus = document.querySelector("[data-mudprint-link-status]");
-const mentionNotificationButton = document.querySelector("[data-mention-notifications]");
-const mentionNotificationCount = document.querySelector("[data-mention-notification-count]");
-const signalNotificationButton = document.querySelector("[data-signal-notifications]");
-const signalNotificationCount = document.querySelector("[data-signal-notification-count]");
+const profileNotifications = document.querySelector("[data-profile-notifications]");
+const notificationBadge = document.querySelector("[data-notification-badge]");
+const notificationCount = document.querySelector("[data-notification-count]");
+const notificationLive = document.querySelector("[data-notification-live]");
+const notificationMenu = document.querySelector("[data-notification-menu]");
+const notificationBoardAction = document.querySelector("[data-notification-board]");
+const notificationBoardSummary = document.querySelector("[data-notification-board-summary]");
+const notificationBoardCount = document.querySelector("[data-notification-board-count]");
+const notificationSignalAction = document.querySelector("[data-notification-signals]");
+const notificationSignalSummary = document.querySelector("[data-notification-signal-summary]");
+const notificationSignalCount = document.querySelector("[data-notification-signal-count]");
 const dmSubmitButton = dmForm.querySelector('button[type="submit"]');
 
 let activeProvider;
@@ -233,7 +243,17 @@ let previousLinkedEmail = "";
 let notifications = [];
 let signalMessages = [];
 let signalUnreadCount = 0;
+let signalProfileByFingerprint = new Map();
+let ambiguousSignalFingerprints = new Set();
+let ownSignalFingerprints = new Set();
+let signalOperationQueue = Promise.resolve();
+let signalIdentityPromise;
+let signalIdentityAccountId = "";
+let signalRefreshPromise;
+let signalRefreshAccountId = "";
 let notificationRefreshTimer;
+let notificationMenuFrame;
+let lastNotificationAnnouncement = "";
 let accessRefreshPromise;
 let lastAccessRefreshAt = 0;
 let authRebindUserId = "";
@@ -342,7 +362,7 @@ function messageTimestamp(message) {
   return Number.isFinite(time) ? time : 0;
 }
 
-function lastSeenSignalTime() {
+function legacySeenSignalTime() {
   try {
     return Number(window.localStorage.getItem(signalSeenStorageKey()) || 0);
   } catch {
@@ -350,34 +370,363 @@ function lastSeenSignalTime() {
   }
 }
 
-function renderNotificationBadges() {
-  const mentionCount = notifications.filter((notification) => !notification.read_at).length;
-  mentionNotificationCount.textContent = mentionCount > 99 ? "99+" : String(mentionCount);
-  mentionNotificationButton.hidden = mentionCount === 0;
-  mentionNotificationButton.dataset.tooltip = `${mentionCount} new ${mentionCount === 1 ? "tag or reply" : "tags or replies"}`;
-  mentionNotificationButton.setAttribute("aria-label", `Open ${mentionCount} new ${mentionCount === 1 ? "tag or reply" : "tags or replies"}`);
-
-  signalNotificationCount.textContent = signalUnreadCount > 99 ? "99+" : String(signalUnreadCount);
-  signalNotificationButton.hidden = !dmAccessReady || signalUnreadCount === 0;
-  signalNotificationButton.dataset.tooltip = `${signalUnreadCount} new private ${signalUnreadCount === 1 ? "signal" : "signals"}`;
-  signalNotificationButton.setAttribute("aria-label", `Open ${signalUnreadCount} new private ${signalUnreadCount === 1 ? "signal" : "signals"}`);
+function assertSignalOperationAccount(accountId) {
+  if (!accountId || String(currentSession?.user?.id || "") !== accountId) {
+    throw new Error("The signed-in account changed while Signals were updating.");
+  }
 }
 
-function updateSignalUnread(messages, { markSeen = false } = {}) {
-  const incoming = (messages || []).filter((message) => message.direction !== "outbox");
-  if (markSeen) {
-    const latest = Math.max(Date.now(), ...incoming.map(messageTimestamp));
-    try {
-      window.localStorage.setItem(signalSeenStorageKey(), String(latest));
-    } catch {
-      // Private browsing can prevent local unread persistence without affecting DMs.
-    }
-    signalUnreadCount = 0;
-  } else {
-    const seenAt = lastSeenSignalTime();
-    signalUnreadCount = incoming.filter((message) => messageTimestamp(message) > seenAt).length;
+function queueSignalOperation(operation) {
+  const accountId = String(currentSession?.user?.id || "");
+  const run = async () => {
+    assertSignalOperationAccount(accountId);
+    const result = await operation({
+      accountId,
+      assertCurrent: () => assertSignalOperationAccount(accountId),
+    });
+    assertSignalOperationAccount(accountId);
+    return result;
+  };
+  const previous = signalOperationQueue.catch(() => {});
+  const queued = previous.then(() => navigator.locks?.request
+    ? navigator.locks.request(`claymatching-signal-log:${accountId}`, { mode: "exclusive" }, run)
+    : run());
+  signalOperationQueue = queued.catch(() => {});
+  return queued;
+}
+
+function signalMessageDirection(message) {
+  const contactFingerprint = String(message?.contactFingerprint || "").trim().toLowerCase();
+  const locallySent = message?.direction === "outbox" && (
+    (Array.isArray(message?.envelopeIds) && message.envelopeIds.length > 0)
+      || Number(message?.deviceCount || 0) > 0
+      || Number(message?.deliveredCount || 0) > 0
+  );
+  return locallySent || ownSignalFingerprints.has(contactFingerprint)
+    ? "outbox"
+    : "inbox";
+}
+
+function signalIdentityDisplayName(accountId, handle) {
+  return `${SIGNAL_IDENTITY_DISPLAY_PREFIX}${String(accountId || "").toLowerCase()}:${cleanUsername(handle)}`;
+}
+
+function parseSignalIdentityDisplayName(value) {
+  const displayName = String(value || "").trim();
+  if (!displayName.startsWith(SIGNAL_IDENTITY_DISPLAY_PREFIX)) return undefined;
+  const remainder = displayName.slice(SIGNAL_IDENTITY_DISPLAY_PREFIX.length);
+  const separator = remainder.indexOf(":");
+  if (separator < 1) return undefined;
+  const accountId = remainder.slice(0, separator).toLowerCase();
+  const handle = cleanUsername(remainder.slice(separator + 1));
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(accountId) || !handle) return undefined;
+  return { accountId, handle };
+}
+
+function unreadBoardNotifications() {
+  const unique = new Map();
+  for (const notification of notifications.filter((entry) => !entry.read_at)) {
+    const key = `${notification.actor_user_id || "unknown"}:${notification.post_id || notification.id}`;
+    const saved = unique.get(key);
+    if (!saved || (saved.kind !== "reply" && notification.kind === "reply")) unique.set(key, notification);
   }
+  return [...unique.values()];
+}
+
+function signalMessageHandle(message) {
+  const candidates = signalMessageDirection(message) === "outbox"
+    ? [message.counterpartyHandle, message.conversationHandle, message.recipient]
+    : [message.author, message.counterpartyHandle, message.conversationHandle];
+  for (const candidate of candidates) {
+    const handle = cleanUsername(candidate);
+    if (handle && handle.toLowerCase() !== cleanUsername(currentProfile?.handle).toLowerCase()) return handle;
+  }
+  return "";
+}
+
+function signalCounterpartyFingerprint(message) {
+  const contactFingerprint = String(message?.contactFingerprint || "").trim().toLowerCase();
+  const recipientFingerprint = String(message?.recipientFingerprint || "").trim().toLowerCase();
+  if (signalMessageDirection(message) === "outbox" && ownSignalFingerprints.has(contactFingerprint)) {
+    return recipientFingerprint || contactFingerprint;
+  }
+  return contactFingerprint;
+}
+
+function signalProfileForMessage(message) {
+  const fingerprint = signalCounterpartyFingerprint(message);
+  if (!fingerprint || ambiguousSignalFingerprints.has(fingerprint)) return undefined;
+  return signalProfileByFingerprint.get(fingerprint);
+}
+
+function signalConversationIdentity(message) {
+  const profile = signalProfileForMessage(message);
+  if (profile?.user_id) {
+    return {
+      handle: cleanUsername(profile.handle) || "encrypted-contact",
+      key: `profile:${profile.user_id}`,
+      profile,
+    };
+  }
+  const fingerprint = signalCounterpartyFingerprint(message);
+  const fallbackKey = String(message?.conversationKey || message?.conversationId || message?.envelopeId || message?.id || "unknown");
+  return {
+    handle: "encrypted-contact",
+    key: `contact:${fingerprint || fallbackKey}`,
+    profile: undefined,
+  };
+}
+
+async function verifiedSignalDevice(device) {
+  const claimed = String(device?.key_fingerprint || "").trim().toLowerCase();
+  if (!claimed || !signalCore?.verifySignalContactCode) return undefined;
+  try {
+    const verified = await signalCore.verifySignalContactCode(device.contact_code);
+    const embedded = String(verified?.fingerprint || "").trim().toLowerCase();
+    if (!embedded || embedded !== claimed) return undefined;
+    const binding = parseSignalIdentityDisplayName(verified?.displayName);
+    if (!binding) return undefined;
+    return {
+      ...binding,
+      fingerprint: embedded,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+async function signalDeviceFingerprint(device) {
+  return (await verifiedSignalDevice(device))?.fingerprint || "";
+}
+
+async function indexSignalDevicesForProfile(
+  devices,
+  profile,
+  profileMap = signalProfileByFingerprint,
+  ambiguousFingerprints = ambiguousSignalFingerprints,
+) {
+  const verifiedDevices = await Promise.all((devices || []).map(verifiedSignalDevice));
+  const expectedAccountId = String(profile?.user_id || "").toLowerCase();
+  const acceptedDevices = [];
+  for (const [index, verified] of verifiedDevices.entries()) {
+    const fingerprint = verified?.fingerprint || "";
+    if (!fingerprint || !expectedAccountId || verified.accountId !== expectedAccountId) continue;
+    acceptedDevices.push({ device: devices[index], fingerprint });
+    if (ambiguousFingerprints.has(fingerprint)) continue;
+    if (!profileMap.has(fingerprint)) {
+      profileMap.set(fingerprint, profile);
+      continue;
+    }
+    const existing = profileMap.get(fingerprint);
+    if (existing?.user_id !== profile?.user_id) {
+      profileMap.delete(fingerprint);
+      ambiguousFingerprints.add(fingerprint);
+    }
+  }
+  return acceptedDevices;
+}
+
+function isUnreadSignalMessage(message) {
+  if (signalMessageDirection(message) === "outbox") return false;
+  if (!message?.unread) return false;
+  const legacySeenAt = legacySeenSignalTime();
+  return !legacySeenAt || messageTimestamp(message) > legacySeenAt;
+}
+
+function unreadSignalMessages(messages = signalMessages) {
+  return (messages || []).filter(isUnreadSignalMessage);
+}
+
+function notificationActorLabel(notification) {
+  const actor = profiles.find((profile) => profile.user_id === notification?.actor_user_id);
+  const handle = cleanUsername(actor?.handle);
+  return handle ? `@${handle}` : "another creature";
+}
+
+function signalNotificationActorLabel(message) {
+  const handle = cleanUsername(signalProfileForMessage(message)?.handle);
+  if (handle) return `@${handle}`;
+  const encryptedHandle = signalMessageHandle(message);
+  return encryptedHandle ? `@${encryptedHandle} (encrypted contact)` : "an encrypted contact";
+}
+
+function formatNotificationSenders(labels = []) {
+  const counts = new Map();
+  for (const label of labels.filter(Boolean)) counts.set(label, (counts.get(label) || 0) + 1);
+  const entries = [...counts.entries()];
+  const visible = entries.slice(0, 3).map(([label, count]) => count > 1 ? `${label} ×${count}` : label);
+  const remaining = entries.length - visible.length;
+  if (remaining > 0) visible.push(`${remaining} more`);
+  if (visible.length <= 1) return visible[0] || "another creature";
+  if (visible.length === 2) return `${visible[0]} and ${visible[1]}`;
+  return `${visible.slice(0, -1).join(", ")}, and ${visible.at(-1)}`;
+}
+
+function boardNotificationCopy(items) {
+  const kinds = new Set(items.map((item) => item.kind));
+  const noun = kinds.size > 1
+    ? "Board alerts"
+    : kinds.has("reply")
+      ? (items.length === 1 ? "Reply" : "Replies")
+      : (items.length === 1 ? "Tag" : "Tags");
+  return `${noun} from ${formatNotificationSenders(items.map(notificationActorLabel))}`;
+}
+
+function signalNotificationCopy(items) {
+  return `${items.length === 1 ? "Signal" : "Signals"} from ${formatNotificationSenders(items.map(signalNotificationActorLabel))}`;
+}
+
+function positionNotificationMenu() {
+  if (!notificationMenu || notificationMenu.hidden || !notificationBadge?.isConnected) return;
+  const triggerRect = notificationBadge.getBoundingClientRect();
+  const menuRect = notificationMenu.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const viewportLeft = viewport?.offsetLeft || 0;
+  const viewportTop = viewport?.offsetTop || 0;
+  const viewportWidth = viewport?.width || window.innerWidth;
+  const viewportHeight = viewport?.height || window.innerHeight;
+  const gutter = 12;
+  const gap = 12;
+  const minLeft = viewportLeft + gutter;
+  const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - menuRect.width - gutter);
+  const left = Math.min(maxLeft, Math.max(minLeft, triggerRect.left));
+  const minTop = viewportTop + gutter;
+  const maxTop = Math.max(minTop, viewportTop + viewportHeight - menuRect.height - gutter);
+  const below = triggerRect.bottom + gap;
+  const above = triggerRect.top - menuRect.height - gap;
+  const top = Math.min(maxTop, Math.max(minTop, below > maxTop && above >= minTop ? above : below));
+  notificationMenu.style.left = `${Math.round(left)}px`;
+  notificationMenu.style.top = `${Math.round(top)}px`;
+}
+
+function setNotificationMenuOpen(open, { focusFirst = false } = {}) {
+  if (!notificationMenu || !notificationBadge) return;
+  const shouldOpen = Boolean(open && !notificationBadge.hidden);
+  notificationBadge.setAttribute("aria-expanded", String(shouldOpen));
+  if (!shouldOpen) {
+    window.cancelAnimationFrame(notificationMenuFrame);
+    notificationMenuFrame = undefined;
+    if (typeof notificationMenu.hidePopover === "function" && notificationMenu.matches(":popover-open")) notificationMenu.hidePopover();
+    notificationMenu.hidden = true;
+    return;
+  }
+  notificationMenu.hidden = false;
+  if (typeof notificationMenu.showPopover === "function" && !notificationMenu.matches(":popover-open")) notificationMenu.showPopover();
+  positionNotificationMenu();
+  if (focusFirst) window.requestAnimationFrame(() => notificationMenu.querySelector("button:not([hidden])")?.focus());
+}
+
+function scheduleNotificationMenuPosition() {
+  if (!notificationMenu || notificationMenu.hidden || notificationMenuFrame) return;
+  notificationMenuFrame = window.requestAnimationFrame(() => {
+    notificationMenuFrame = undefined;
+    positionNotificationMenu();
+  });
+}
+
+function renderNotificationBadges() {
+  const boardItems = unreadBoardNotifications();
+  const signalItems = dmAccessReady ? unreadSignalMessages() : [];
+  signalUnreadCount = signalItems.length;
+  const total = boardItems.length + signalItems.length;
+  const parts = [];
+  if (boardItems.length) parts.push(boardNotificationCopy(boardItems));
+  if (signalItems.length) parts.push(signalNotificationCopy(signalItems));
+
+  const notificationHadFocus = profileNotifications.contains(document.activeElement);
+  const announcementKey = total ? `${total}:${parts.join("|")}` : "0";
+  if (announcementKey !== lastNotificationAnnouncement) {
+    notificationLive.textContent = total
+      ? `${total} unread notification${total === 1 ? "" : "s"}. ${parts.join(". ")}`
+      : lastNotificationAnnouncement && lastNotificationAnnouncement !== "0"
+        ? "All notifications read."
+        : "";
+    lastNotificationAnnouncement = announcementKey;
+  }
+
+  notificationCount.textContent = total > 99 ? "99+" : String(total);
+  notificationBadge.hidden = total === 0;
+  notificationBadge.classList.toggle("has-board", boardItems.length > 0);
+  notificationBadge.classList.toggle("has-signals", signalItems.length > 0);
+  notificationBadge.dataset.tooltip = parts.join(" · ") || "No unread notifications";
+  notificationBadge.setAttribute("aria-label", total
+    ? `Open ${total} unread notification${total === 1 ? "" : "s"}`
+    : "No unread notifications");
+
+  const boardActionHadFocus = notificationBoardAction === document.activeElement;
+  const signalActionHadFocus = notificationSignalAction === document.activeElement;
+  notificationBoardAction.hidden = boardItems.length === 0;
+  notificationBoardCount.textContent = boardItems.length > 99 ? "99+" : String(boardItems.length);
+  notificationBoardSummary.textContent = boardItems.length ? boardNotificationCopy(boardItems) : "No new board replies";
+  notificationSignalAction.hidden = signalItems.length === 0;
+  notificationSignalCount.textContent = signalItems.length > 99 ? "99+" : String(signalItems.length);
+  notificationSignalSummary.textContent = signalItems.length ? signalNotificationCopy(signalItems) : "No new private Signals";
+  if ((boardActionHadFocus && notificationBoardAction.hidden) || (signalActionHadFocus && notificationSignalAction.hidden)) {
+    const replacement = [notificationBoardAction, notificationSignalAction].find((action) => !action.hidden) || notificationBadge;
+    window.requestAnimationFrame(() => replacement.focus());
+  }
+  if (!total) {
+    if (activeAchievementTooltipTrigger === notificationBadge) hideAchievementTooltip();
+    setNotificationMenuOpen(false);
+    if (notificationHadFocus) profileAvatarButton.focus();
+  }
+}
+
+function updateSignalUnread(messages = signalMessages) {
+  signalUnreadCount = unreadSignalMessages(messages).length;
   renderNotificationBadges();
+}
+
+async function markSignalMessageIdsRead(messages) {
+  const accountId = String(currentSession?.user?.id || "");
+  const accountHandle = cleanUsername(currentProfile?.handle);
+  const identity = signalIdentity || await initializeSignalIdentity();
+  assertSignalOperationAccount(accountId);
+  const messageIds = (messages || []).flatMap((message) => [message.id, message.envelopeId, ...(message.envelopeIds || [])]).filter(Boolean);
+  return signalCore.markSignalMessagesRead({
+    accountHandle,
+    accountId,
+    displayName: accountHandle,
+    messageIds,
+    signalContactCode: identity.contactCode,
+  });
+}
+
+async function migrateLegacySignalReadState(messages) {
+  const seenAt = legacySeenSignalTime();
+  if (!seenAt) return messages || [];
+  const toMark = (messages || []).filter((message) => (
+    signalMessageDirection(message) !== "outbox" && message.unread && messageTimestamp(message) <= seenAt
+  ));
+  let saved = messages || [];
+  if (toMark.length) {
+    try {
+      saved = await markSignalMessageIdsRead(toMark);
+    } catch {
+      return messages || [];
+    }
+  }
+  try {
+    window.localStorage.removeItem(signalSeenStorageKey());
+  } catch {
+    // The encrypted message log remains authoritative if localStorage is unavailable.
+  }
+  return saved;
+}
+
+async function markSignalThreadRead(conversationKey, messages = signalMessages) {
+  const target = String(conversationKey || "");
+  if (!target) return messages || [];
+  const toMark = (messages || []).filter((message) => (
+    signalMessageDirection(message) !== "outbox" && message.unread && signalConversationIdentity(message).key === target
+  ));
+  if (!toMark.length) return messages || [];
+  try {
+    return await markSignalMessageIdsRead(toMark);
+  } catch {
+    showToast("This thread opened, but its unread marker could not be saved yet.");
+    return messages || [];
+  }
 }
 
 function shortAddress(address) {
@@ -997,10 +1346,14 @@ function renderAccessControls() {
     if (signalInbox) signalInbox.hidden = !hasConversations;
   }
   if (!dmAccessReady) {
-    signalNotificationButton.hidden = true;
     signalUnreadCount = 0;
+    signalProfileByFingerprint = new Map();
+    ambiguousSignalFingerprints = new Set();
+    ownSignalFingerprints = new Set();
     signalIdentity = undefined;
     ownSignalDevices = [];
+    signalIdentityPromise = undefined;
+    signalIdentityAccountId = "";
     signalMessages = [];
     currentDmTarget = undefined;
     currentDmDevices = [];
@@ -1014,6 +1367,7 @@ function renderAccessControls() {
     if (signalFocusWasVisible && holderSessionReady) {
       window.requestAnimationFrame(() => signalsLock?.querySelector("button")?.focus());
     }
+    renderNotificationBadges();
   }
   if (profileAccessBadge) profileAccessBadge.hidden = !readOnly;
 }
@@ -1528,13 +1882,22 @@ function showProvisionalOnboarding(session) {
   squishes = [];
   mutualMatches = [];
   notifications = [];
+  lastNotificationAnnouncement = "";
+  notificationLive.textContent = "";
   signalMessages = [];
   signalUnreadCount = 0;
+  signalProfileByFingerprint = new Map();
+  ambiguousSignalFingerprints = new Set();
+  ownSignalFingerprints = new Set();
   signalIdentity = undefined;
   linkedSuiConnection = null;
   currentDmTarget = undefined;
   currentDmDevices = [];
   ownSignalDevices = [];
+  signalIdentityPromise = undefined;
+  signalIdentityAccountId = "";
+  signalRefreshPromise = undefined;
+  signalRefreshAccountId = "";
   accessRefreshPromise = undefined;
   lastAccessRefreshAt = 0;
   renderNotificationBadges();
@@ -2749,8 +3112,13 @@ function resetApp() {
   squishes = [];
   mutualMatches = [];
   notifications = [];
+  lastNotificationAnnouncement = "";
+  notificationLive.textContent = "";
   signalMessages = [];
   signalUnreadCount = 0;
+  signalProfileByFingerprint = new Map();
+  ambiguousSignalFingerprints = new Set();
+  ownSignalFingerprints = new Set();
   holderCsrfToken = "";
   ownSyncedAchievements = [];
   featuredAchievementChoicesReady = false;
@@ -2761,6 +3129,10 @@ function resetApp() {
   currentDmTarget = undefined;
   currentDmDevices = [];
   ownSignalDevices = [];
+  signalIdentityPromise = undefined;
+  signalIdentityAccountId = "";
+  signalRefreshPromise = undefined;
+  signalRefreshAccountId = "";
   accessRefreshPromise = undefined;
   lastAccessRefreshAt = 0;
   pendingConsentSession = null;
@@ -2772,6 +3144,7 @@ function resetApp() {
   clearLinkedEmailCodeEntry();
   window.clearInterval(notificationRefreshTimer);
   notificationRefreshTimer = undefined;
+  renderNotificationBadges();
   clearReplyTarget();
   setAccountMenuOpen(false);
   viewedProfile = undefined;
@@ -2797,7 +3170,7 @@ async function loadAppData() {
     db.from("clay_reactions").select("post_id,user_id,created_at").limit(5000),
     db.from("clay_squishes").select("actor_user_id,target_user_id,created_at").limit(5000),
     db.rpc("clay_matches"),
-    db.from("clay_notifications").select("id,actor_user_id,post_id,kind,read_at,created_at").order("created_at", { ascending: false }).limit(100),
+    db.from("clay_notifications").select("id,actor_user_id,post_id,kind,read_at,created_at").is("read_at", null).order("created_at", { ascending: false }).limit(100),
   ]);
   feed.setAttribute("aria-busy", "false");
   matchingGrid.setAttribute("aria-busy", "false");
@@ -2859,6 +3232,7 @@ async function refreshNotificationState() {
   if (!await refreshAuthoritativeAccess()) return;
   const result = await db.from("clay_notifications")
     .select("id,actor_user_id,post_id,kind,read_at,created_at")
+    .is("read_at", null)
     .order("created_at", { ascending: false })
     .limit(100);
   if (!result.error) notifications = result.data || [];
@@ -4002,44 +4376,75 @@ function getSignalDeviceId() {
   }
 }
 
-async function initializeSignalIdentity() {
-  if (!currentProfile?.handle || !currentSession) return null;
+async function initializeSignalIdentityForAccount(accountId, accountHandle) {
   await refreshAuthoritativeAccess({ maxAgeMs: 5_000, requireDm: true });
+  assertSignalOperationAccount(accountId);
   if (!dmAccessReady) {
     throw new Error("A signed Solana or Sui wallet is required before this device can create or register a Signal inbox.");
   }
   signalStatus.textContent = "Preparing encrypted messaging on this browser…";
   setStatusSemantics(signalStatus, false);
-  signalCore ||= await import("/apps/noctweave-web-core/noctweave-core-adapter.js");
-  signalIdentity = await signalCore.createOrLoadSignalIdentity({
-    accountHandle: currentProfile.handle,
-    accountId: currentSession.user.id,
-    displayName: currentProfile.handle,
+  signalCore ||= await import("/apps/noctweave-web-core/noctweave-core-adapter.js?v=20260715-3");
+  assertSignalOperationAccount(accountId);
+  const identity = await signalCore.createOrLoadSignalIdentity({
+    accountHandle,
+    accountId,
+    displayName: signalIdentityDisplayName(accountId, accountHandle),
     registerInbox: true,
     relayUrl: SIGNAL_RELAY_URL,
   });
-  if (!signalIdentity.contactCode || !signalIdentity.fingerprint) {
-    throw new Error(signalIdentity.registrationError || "The encrypted inbox could not be registered.");
+  assertSignalOperationAccount(accountId);
+  if (!identity.contactCode || !identity.fingerprint) {
+    throw new Error(identity.registrationError || "The encrypted inbox could not be registered.");
   }
   const deviceId = getSignalDeviceId();
   const { error } = await db.from("clay_signal_devices").upsert({
-    contact_code: signalIdentity.contactCode,
+    contact_code: identity.contactCode,
     device_id: deviceId,
     device_label: `${navigator.platform || "Browser"} / Claymatching web`,
-    key_fingerprint: signalIdentity.fingerprint,
+    key_fingerprint: identity.fingerprint,
     platform: "web",
-    relay_url: signalIdentity.relayUrl || SIGNAL_RELAY_URL,
+    relay_url: identity.relayUrl || SIGNAL_RELAY_URL,
     revoked_at: null,
-    user_id: currentSession.user.id,
+    user_id: accountId,
   }, { onConflict: "user_id,device_id" });
   if (error) throw error;
-  const ownResult = await db.from("clay_signal_devices").select("device_id,contact_code,key_fingerprint,relay_url").eq("user_id", currentSession.user.id).is("revoked_at", null);
-  ownSignalDevices = ownResult.data || [];
-  signalStatus.textContent = signalIdentity.registered
+  assertSignalOperationAccount(accountId);
+  const ownResult = await db.from("clay_signal_devices").select("device_id,contact_code,key_fingerprint,relay_url").eq("user_id", accountId).is("revoked_at", null);
+  assertSignalOperationAccount(accountId);
+  const ownDevices = ownResult.data || [];
+  const verifiedOwnFingerprints = await Promise.all(ownDevices.map(signalDeviceFingerprint));
+  assertSignalOperationAccount(accountId);
+  signalIdentity = identity;
+  ownSignalDevices = ownDevices;
+  ownSignalFingerprints = new Set([
+    String(identity.fingerprint || "").trim().toLowerCase(),
+    ...verifiedOwnFingerprints,
+  ].filter(Boolean));
+  signalStatus.textContent = identity.registered
     ? "Encrypted inbox ready on this device."
-    : `Encrypted messaging is ready locally; relay connection will retry: ${signalIdentity.registrationError || "offline"}`;
+    : `Encrypted messaging is ready locally; relay connection will retry: ${identity.registrationError || "offline"}`;
   setStatusSemantics(signalStatus, false);
-  return signalIdentity;
+  return identity;
+}
+
+async function initializeSignalIdentity() {
+  const accountId = String(currentSession?.user?.id || "");
+  const accountHandle = cleanUsername(currentProfile?.handle);
+  if (!accountId || !accountHandle) return null;
+  if (signalIdentityPromise && signalIdentityAccountId === accountId) return signalIdentityPromise;
+  const initialize = () => initializeSignalIdentityForAccount(accountId, accountHandle);
+  const promise = (navigator.locks?.request
+    ? navigator.locks.request(`claymatching-signal-identity:${accountId}`, { mode: "exclusive" }, initialize)
+    : initialize()).finally(() => {
+      if (signalIdentityPromise === promise) {
+        signalIdentityPromise = undefined;
+        signalIdentityAccountId = "";
+      }
+    });
+  signalIdentityPromise = promise;
+  signalIdentityAccountId = accountId;
+  return promise;
 }
 
 async function syncSignals({ targetDevices = [] } = {}) {
@@ -4062,14 +4467,7 @@ async function syncSignals({ targetDevices = [] } = {}) {
 }
 
 function signalCounterpartyHandle(message) {
-  const candidates = message.direction === "outbox"
-    ? [message.counterpartyHandle, message.conversationHandle, message.recipient]
-    : [message.counterpartyHandle, message.conversationHandle, message.author];
-  for (const candidate of candidates) {
-    const handle = cleanUsername(candidate);
-    if (handle && handle.toLowerCase() !== cleanUsername(currentProfile?.handle).toLowerCase()) return handle;
-  }
-  return "unknown-creature";
+  return signalConversationIdentity(message).handle;
 }
 
 function renderSignalInbox(messages) {
@@ -4085,11 +4483,10 @@ function renderSignalInbox(messages) {
   signalMessages = messages || [];
   const groups = new Map();
   for (const message of [...signalMessages].sort((a, b) => messageTimestamp(a) - messageTimestamp(b))) {
-    const handle = signalCounterpartyHandle(message);
-    const key = handle.toLowerCase();
-    const group = groups.get(key) || { handle, messages: [] };
+    const identity = signalConversationIdentity(message);
+    const group = groups.get(identity.key) || { ...identity, messages: [] };
     group.messages.push(message);
-    groups.set(key, group);
+    groups.set(identity.key, group);
   }
 
   const hasConversations = groups.size > 0;
@@ -4099,12 +4496,11 @@ function renderSignalInbox(messages) {
   if (!hasConversations) return;
   if (focusWasInsideIntro) window.requestAnimationFrame(() => signalInboxHeading?.focus());
 
-  const seenAt = lastSeenSignalTime();
   const ordered = [...groups.values()].sort((a, b) => messageTimestamp(b.messages.at(-1)) - messageTimestamp(a.messages.at(-1)));
   for (const group of ordered) {
     const latest = group.messages.at(-1);
-    const profile = profiles.find((candidate) => candidate.handle?.toLowerCase() === group.handle.toLowerCase());
-    const unread = group.messages.filter((message) => message.direction !== "outbox" && messageTimestamp(message) > seenAt).length;
+    const profile = group.profile;
+    const unread = group.messages.filter(isUnreadSignalMessage).length;
     const row = document.createElement("article");
     row.className = "signal-thread";
     row.append(avatarElement(profile || { handle: group.handle }));
@@ -4139,37 +4535,80 @@ function renderSignalInbox(messages) {
       meta.append(count);
     }
     row.append(copy, meta);
-    if (profile) {
-      const open = document.createElement("button");
-      open.className = "clay-button clay-button-dark";
-      open.type = "button";
+    const open = document.createElement("button");
+    open.className = "clay-button clay-button-dark";
+    open.type = "button";
+    if (profile && mutualMatches.some((match) => match.user_id === profile.user_id)) {
       open.dataset.dmUser = profile.user_id;
       open.textContent = "open thread";
-      row.append(open);
+    } else {
+      open.dataset.dmHandle = group.handle;
+      open.dataset.dmConversation = group.key;
+      open.textContent = "open saved thread";
     }
+    row.append(open);
     signalInboxList.append(row);
   }
 }
 
-async function refreshSignalInbox({ quiet = false, markSeen = false } = {}) {
+async function refreshSignalInbox({ quiet = false } = {}) {
   if (!currentProfile?.handle || !currentSession) return [];
-  await refreshAuthoritativeAccess({ requireDm: true });
-  if (!dmAccessReady) return [];
-  if (!quiet) {
-    signalStatus.textContent = "Checking encrypted relay inboxes…";
-    setStatusSemantics(signalStatus, false);
-  }
-  const identity = signalIdentity || await initializeSignalIdentity();
-  const deviceResults = await Promise.all(mutualMatches.map((match) => db.rpc("resolve_clay_signal_devices", { p_target_user_id: match.user_id })));
-  const devices = deviceResults.flatMap((result) => result.data || []);
-  const messages = await syncSignals({ targetDevices: devices });
-  renderSignalInbox(messages);
-  updateSignalUnread(messages, { markSeen });
-  if (!quiet) {
-    signalStatus.textContent = `${messages.length} locally stored encrypted signal${messages.length === 1 ? "" : "s"}. Inbox ${identity.registered ? "connected" : "will retry relay registration"}.`;
-    setStatusSemantics(signalStatus, false);
-  }
-  return messages;
+  const accountId = String(currentSession.user.id);
+  if (signalRefreshPromise && signalRefreshAccountId === accountId) return signalRefreshPromise;
+  const refreshPromise = (async () => {
+    await refreshAuthoritativeAccess({ requireDm: true });
+    if (!dmAccessReady) return [];
+    return queueSignalOperation(async ({ assertCurrent }) => {
+      if (!quiet) {
+        signalStatus.textContent = "Checking encrypted relay inboxes…";
+        setStatusSemantics(signalStatus, false);
+      }
+      const identity = signalIdentity || await initializeSignalIdentity();
+      assertCurrent();
+      const deviceResults = await Promise.all(mutualMatches.map(async (match) => ({
+        match,
+        result: await db.rpc("resolve_clay_signal_devices", { p_target_user_id: match.user_id }),
+      })));
+      assertCurrent();
+      const nextProfileByFingerprint = new Map();
+      const nextAmbiguousFingerprints = new Set();
+      const devices = [];
+      for (const { match, result } of deviceResults) {
+        const profileDevices = result.data || [];
+        devices.push(...profileDevices);
+        await indexSignalDevicesForProfile(profileDevices, match, nextProfileByFingerprint, nextAmbiguousFingerprints);
+      }
+      assertCurrent();
+      signalProfileByFingerprint = nextProfileByFingerprint;
+      ambiguousSignalFingerprints = nextAmbiguousFingerprints;
+      const visibleConversationKey = dmDialog.open ? String(currentDmTarget?.signalConversationKey || "") : "";
+      let messages = await syncSignals({ targetDevices: devices });
+      assertCurrent();
+      messages = await migrateLegacySignalReadState(messages);
+      assertCurrent();
+      if (visibleConversationKey && dmDialog.open && currentDmTarget?.signalConversationKey === visibleConversationKey) {
+        messages = await markSignalThreadRead(visibleConversationKey, messages);
+        assertCurrent();
+        if (dmDialog.open && currentDmTarget?.signalConversationKey === visibleConversationKey) renderDmMessages(messages);
+      }
+      assertCurrent();
+      renderSignalInbox(messages);
+      updateSignalUnread(messages);
+      if (!quiet) {
+        signalStatus.textContent = `${messages.length} locally stored encrypted signal${messages.length === 1 ? "" : "s"}. Inbox ${identity.registered ? "connected" : "will retry relay registration"}.`;
+        setStatusSemantics(signalStatus, false);
+      }
+      return messages;
+    });
+  })().finally(() => {
+    if (signalRefreshPromise === refreshPromise) {
+      signalRefreshPromise = undefined;
+      signalRefreshAccountId = "";
+    }
+  });
+  signalRefreshPromise = refreshPromise;
+  signalRefreshAccountId = accountId;
+  return signalRefreshPromise;
 }
 
 async function resolveCurrentDmDevices() {
@@ -4199,6 +4638,43 @@ async function resolveCurrentDmDevices() {
   return devices;
 }
 
+async function openStoredDm(conversationKey, handle) {
+  const storedHandle = cleanUsername(handle);
+  const storedConversationKey = String(conversationKey || "");
+  if (!storedHandle || !storedConversationKey || !dmAccessReady) return;
+  if (currentDmTarget?.signalConversationKey !== storedConversationKey) dmForm.elements.message.value = "";
+  currentDmTarget = {
+    handle: storedHandle,
+    signalConversationKey: storedConversationKey,
+  };
+  currentDmDevices = [];
+  setDmComposerReady(false);
+  dmDialog.querySelector("[data-dm-title]").textContent = `Saved Signal @${storedHandle}`;
+  renderClayCollectSlot(dmCollectLink, undefined);
+  dmStatus.textContent = "Opening encrypted history stored on this device…";
+  setStatusSemantics(dmStatus, false);
+  if (!dmDialog.open) dmDialog.showModal();
+  try {
+    await queueSignalOperation(async ({ assertCurrent }) => {
+      assertCurrent();
+      if (currentDmTarget?.signalConversationKey !== storedConversationKey) return;
+      const messages = await markSignalThreadRead(storedConversationKey, signalMessages);
+      assertCurrent();
+      if (currentDmTarget?.signalConversationKey !== storedConversationKey) return;
+      renderDmMessages(messages);
+      renderSignalInbox(messages);
+      updateSignalUnread(messages);
+      dmStatus.textContent = "Saved encrypted history. Sending stays locked unless this creature is a current mutual with an active device.";
+      setStatusSemantics(dmStatus, false);
+      window.requestAnimationFrame(() => dmDialog.querySelector("[data-dm-close]")?.focus());
+    });
+  } catch (error) {
+    if (currentDmTarget?.signalConversationKey !== storedConversationKey) return;
+    dmStatus.textContent = error.message || "Saved encrypted history could not be opened.";
+    setStatusSemantics(dmStatus, true);
+  }
+}
+
 async function openDm(targetUserId) {
   try {
     await refreshAuthoritativeAccess({ requireDm: true });
@@ -4209,10 +4685,14 @@ async function openDm(targetUserId) {
   const target = profiles.find((profile) => profile.user_id === targetUserId);
   if (!target) return;
   if (!mutualMatches.some((profile) => profile.user_id === targetUserId)) {
-    showToast(`Encrypted DMs unlock after you and @${target.handle} squish each other.`);
-    return;
+    const saved = signalMessages.map(signalConversationIdentity).find((identity) => identity.key === `profile:${targetUserId}`);
+    return saved ? openStoredDm(saved.key, saved.handle) : undefined;
   }
-  currentDmTarget = target;
+  if (currentDmTarget?.signalConversationKey !== `profile:${target.user_id}`) dmForm.elements.message.value = "";
+  currentDmTarget = {
+    ...target,
+    signalConversationKey: `profile:${target.user_id}`,
+  };
   currentDmDevices = [];
   setDmComposerReady(false);
   dmDialog.querySelector("[data-dm-title]").textContent = `Signal @${target.handle}`;
@@ -4225,18 +4705,39 @@ async function openDm(targetUserId) {
   loading.textContent = "Decrypting local conversation history…";
   dmThread.append(loading);
   dmDialog.showModal();
+  const expectedTargetUserId = String(target.user_id);
   try {
-    const targetDevices = await resolveCurrentDmDevices();
-    await initializeSignalIdentity();
-    const messages = await syncSignals({ targetDevices });
-    renderDmMessages(messages);
-    renderSignalInbox(messages);
-    updateSignalUnread(messages, { markSeen: true });
-    dmStatus.textContent = "End-to-end encrypted. The relay only sees encrypted data, not this text.";
-    setStatusSemantics(dmStatus, false);
-    setDmComposerReady(true);
-    window.requestAnimationFrame(() => dmForm.elements.message.focus());
+    await queueSignalOperation(async ({ assertCurrent }) => {
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      const targetDevices = await resolveCurrentDmDevices();
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      await initializeSignalIdentity();
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      await indexSignalDevicesForProfile(targetDevices, target);
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      let messages = await syncSignals({ targetDevices });
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      messages = await migrateLegacySignalReadState(messages);
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      messages = await markSignalThreadRead(`profile:${target.user_id}`, messages);
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+      renderDmMessages(messages);
+      renderSignalInbox(messages);
+      updateSignalUnread(messages);
+      dmStatus.textContent = "End-to-end encrypted. The relay only sees encrypted data, not this text.";
+      setStatusSemantics(dmStatus, false);
+      setDmComposerReady(true);
+      window.requestAnimationFrame(() => dmForm.elements.message.focus());
+    });
   } catch (error) {
+    if (String(currentDmTarget?.user_id || "") !== expectedTargetUserId) return;
+    const saved = signalMessages.map(signalConversationIdentity).find((identity) => identity.key === `profile:${target.user_id}`);
+    if (saved) return openStoredDm(saved.key, saved.handle);
     dmStatus.textContent = error.message || "Encrypted conversation could not be opened.";
     setStatusSemantics(dmStatus, true);
     setDmComposerReady(false);
@@ -4251,13 +4752,11 @@ function setDmComposerReady(ready) {
 
 function renderDmMessages(messages) {
   dmThread.replaceChildren();
-  const targetHandle = `@${currentDmTarget?.handle || ""}`.toLowerCase();
-  const conversation = (messages || []).filter((message) => [
-    message.counterpartyHandle,
-    message.conversationHandle,
-    message.recipient,
-    message.author,
-  ].some((value) => String(value || "").toLowerCase() === targetHandle)).slice(0, 60).reverse();
+  const targetConversationKey = String(currentDmTarget?.signalConversationKey || "");
+  const conversation = (messages || [])
+    .filter((message) => signalConversationIdentity(message).key === targetConversationKey)
+    .slice(0, 60)
+    .reverse();
   if (!conversation.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
@@ -4267,9 +4766,10 @@ function renderDmMessages(messages) {
   }
   for (const message of conversation) {
     const bubble = document.createElement("article");
-    bubble.className = `dm-bubble ${message.direction === "outbox" ? "is-outbox" : "is-inbox"}`;
+    const direction = signalMessageDirection(message);
+    bubble.className = `dm-bubble ${direction === "outbox" ? "is-outbox" : "is-inbox"}`;
     const meta = document.createElement("small");
-    meta.textContent = `${message.direction === "outbox" ? "you" : currentDmTarget.handle} · ${relativeTime(message.createdAt || message.timestamp)}`;
+    meta.textContent = `${direction === "outbox" ? "you" : currentDmTarget.handle} · ${relativeTime(message.createdAt || message.timestamp)}`;
     const copy = document.createElement("p");
     copy.textContent = message.message;
     bubble.append(meta, copy);
@@ -4288,7 +4788,12 @@ async function sendDm(event) {
     return;
   }
   const message = dmForm.elements.message.value.trim();
-  if (!message || !currentDmTarget) return;
+  const targetUserId = String(currentDmTarget?.user_id || "");
+  const targetHandle = cleanUsername(currentDmTarget?.handle);
+  const targetProfile = currentDmTarget ? { ...currentDmTarget } : undefined;
+  const senderAccountId = String(currentSession?.user?.id || "");
+  const senderHandle = cleanUsername(currentProfile?.handle);
+  if (!message || !targetUserId || !targetHandle || !senderAccountId || !senderHandle) return;
   if (/seed\s+phrase|private\s+key/i.test(message)) {
     dmStatus.textContent = "Credential or seed-phrase language is blocked. Never share wallet secrets.";
     setStatusSemantics(dmStatus, true);
@@ -4297,33 +4802,50 @@ async function sendDm(event) {
   const submitButton = dmForm.querySelector('button[type="submit"]');
   setBusy(submitButton, true, "sealing signal…");
   try {
-    const targetDevices = await resolveCurrentDmDevices();
-    const identity = signalIdentity || await initializeSignalIdentity();
-    const sent = await signalCore.sendSignalText({
-      accountHandle: currentProfile.handle,
-      accountId: currentSession.user.id,
-      displayName: currentProfile.handle,
-      message: message.slice(0, 600),
-      recipientContactCodes: targetDevices.map((device) => device.contact_code),
-      recipientFingerprint: targetDevices[0]?.key_fingerprint || "",
-      recipientHandle: `@${currentDmTarget.handle}`,
-      senderContactCodes: ownSignalDevices.map((device) => device.contact_code),
-      signalContactCode: identity.contactCode,
-      subject: "claymatching signal",
+    await queueSignalOperation(async ({ accountId, assertCurrent }) => {
+      if (accountId !== senderAccountId) return;
+      if (String(currentDmTarget?.user_id || "") !== targetUserId) return;
+      const targetDevices = await resolveCurrentDmDevices();
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== targetUserId) return;
+      const identity = signalIdentity || await initializeSignalIdentity();
+      assertCurrent();
+      if (String(currentDmTarget?.user_id || "") !== targetUserId) return;
+      const verifiedRecipients = await indexSignalDevicesForProfile(targetDevices, targetProfile);
+      assertCurrent();
+      if (accountId !== senderAccountId) return;
+      if (String(currentDmTarget?.user_id || "") !== targetUserId) return;
+      if (!verifiedRecipients.length) {
+        throw new Error("This mutual has no verified Signal device yet. Ask them to reopen Claymatching and try again.");
+      }
+      const sent = await signalCore.sendSignalText({
+        accountHandle: senderHandle,
+        accountId: senderAccountId,
+        displayName: senderHandle,
+        message: message.slice(0, 600),
+        recipientContactCodes: verifiedRecipients.map(({ device }) => device.contact_code),
+        recipientFingerprint: verifiedRecipients[0].fingerprint,
+        recipientHandle: `@${targetHandle}`,
+        senderContactCodes: [...ownSignalDevices].map((device) => device.contact_code),
+        signalContactCode: identity.contactCode,
+        subject: "claymatching signal",
+      });
+      assertCurrent();
+      renderSignalInbox(sent.messages || []);
+      updateSignalUnread(sent.messages || []);
+      if (String(currentDmTarget?.user_id || "") !== targetUserId) return;
+      dmForm.elements.message.value = "";
+      renderDmMessages(sent.messages || []);
+      dmStatus.textContent = `Encrypted signal delivered to ${sent.deviceCount || 1} device${sent.deviceCount === 1 ? "" : "s"}.`;
+      setStatusSemantics(dmStatus, false);
     });
-    dmForm.elements.message.value = "";
-    renderDmMessages(sent.messages || []);
-    renderSignalInbox(sent.messages || []);
-    updateSignalUnread(sent.messages || []);
-    dmStatus.textContent = `Encrypted signal delivered to ${sent.deviceCount || 1} device${sent.deviceCount === 1 ? "" : "s"}.`;
-    setStatusSemantics(dmStatus, false);
   } catch (error) {
     dmStatus.textContent = error.message || "Encrypted signal could not be delivered.";
     setStatusSemantics(dmStatus, true);
     if (!currentDmDevices.length) setDmComposerReady(false);
   } finally {
     setBusy(submitButton, false);
-    if (!dmDialog.open) setDmComposerReady(false);
+    if (!dmDialog.open || String(currentDmTarget?.user_id || "") !== targetUserId) setDmComposerReady(false);
   }
 }
 
@@ -4333,7 +4855,7 @@ async function checkEncryptedInbox() {
     return;
   }
   try {
-    await refreshSignalInbox({ markSeen: true });
+    await refreshSignalInbox();
     window.requestAnimationFrame(() => (signalInbox.hidden ? signalStatus : signalInboxHeading)?.focus());
   } catch (error) {
     signalStatus.textContent = error.message || "Encrypted inbox check failed.";
@@ -4364,7 +4886,7 @@ function setView(view, { scroll = false } = {}) {
     signalsLock.hidden = false;
   }
   if (validView === "signals" && dmAccessReady && currentSession && currentProfile?.handle) {
-    refreshSignalInbox({ quiet: true, markSeen: true }).catch(() => {});
+    refreshSignalInbox({ quiet: true }).catch(() => {});
   }
   if (scroll) window.scrollTo({ top: 0, behavior: preferredScrollBehavior() });
 }
@@ -4519,7 +5041,12 @@ document.querySelector("[data-dm-close]").addEventListener("click", () => {
   setDmComposerReady(false);
   dmDialog.close();
 });
-dmDialog.addEventListener("close", () => setDmComposerReady(false));
+dmDialog.addEventListener("close", () => {
+  setDmComposerReady(false);
+  dmForm.elements.message.value = "";
+  currentDmTarget = undefined;
+  currentDmDevices = [];
+});
 document.querySelector("[data-member-profile-close]").addEventListener("click", () => memberProfileDialog.close());
 document.querySelector("[data-achievement-close]").addEventListener("click", () => achievementDialog.close());
 achievementDialog.addEventListener("close", () => { achievementDialogRequestId += 1; });
@@ -4597,18 +5124,58 @@ document.querySelector("[data-close-signal-directory]").addEventListener("click"
     if (returnFocus?.isConnected) returnFocus.focus();
   });
 });
-mentionNotificationButton.addEventListener("click", async (event) => {
+notificationBadge.addEventListener("click", (event) => {
   event.stopPropagation();
-  const targetPostId = notifications.find((notification) => !notification.read_at)?.post_id;
+  hideAchievementTooltip();
+  setNotificationMenuOpen(notificationMenu.hidden, { focusFirst: event.detail === 0 });
+});
+notificationMenu.addEventListener("toggle", (event) => {
+  const isOpen = event.newState === "open" || notificationMenu.matches(":popover-open");
+  notificationBadge.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen) scheduleNotificationMenuPosition();
+  else notificationMenu.hidden = true;
+});
+notificationMenu.addEventListener("keydown", (event) => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const items = [...notificationMenu.querySelectorAll('button:not([hidden]):not(:disabled)')];
+  if (!items.length) return;
+  event.preventDefault();
+  const currentIndex = items.indexOf(document.activeElement);
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? items.length - 1
+      : event.key === "ArrowDown"
+        ? (currentIndex + 1 + items.length) % items.length
+        : (currentIndex - 1 + items.length) % items.length;
+  items[nextIndex].focus();
+});
+profileNotifications.addEventListener("focusout", () => {
+  window.requestAnimationFrame(() => {
+    if (!profileNotifications.contains(document.activeElement) && !notificationMenu.contains(document.activeElement)) {
+      setNotificationMenuOpen(false);
+    }
+  });
+});
+notificationBoardAction.addEventListener("click", async (event) => {
+  event.stopPropagation();
+  const targetPostId = unreadBoardNotifications()[0]?.post_id;
+  setNotificationMenuOpen(false);
   setView("board", { scroll: true });
   await markMentionNotificationsRead();
-  if (targetPostId) {
-    requestAnimationFrame(() => document.querySelector(`[data-post-id="${CSS.escape(targetPostId)}"]`)?.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" }));
-  }
+  requestAnimationFrame(() => {
+    const target = targetPostId ? document.querySelector(`[data-post-id="${CSS.escape(targetPostId)}"]`) : null;
+    if (!target) return boardHeading.focus();
+    target.tabIndex = -1;
+    target.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" });
+    target.focus({ preventScroll: true });
+  });
 });
-signalNotificationButton.addEventListener("click", (event) => {
+notificationSignalAction.addEventListener("click", (event) => {
   event.stopPropagation();
+  setNotificationMenuOpen(false);
   setView("signals", { scroll: true });
+  window.requestAnimationFrame(() => signalsHeading.focus());
 });
 
 document.addEventListener("pointerover", (event) => {
@@ -4633,9 +5200,14 @@ document.addEventListener("scroll", scheduleAchievementTooltipPosition, true);
 window.addEventListener("resize", scheduleAchievementTooltipPosition);
 window.visualViewport?.addEventListener("resize", scheduleAchievementTooltipPosition);
 window.visualViewport?.addEventListener("scroll", scheduleAchievementTooltipPosition);
+document.addEventListener("scroll", scheduleNotificationMenuPosition, true);
+window.addEventListener("resize", scheduleNotificationMenuPosition);
+window.visualViewport?.addEventListener("resize", scheduleNotificationMenuPosition);
+window.visualViewport?.addEventListener("scroll", scheduleNotificationMenuPosition);
 
 document.addEventListener("click", async (event) => {
   if (!accountArea.contains(event.target)) setAccountMenuOpen(false);
+  if (!profileNotifications.contains(event.target)) setNotificationMenuOpen(false);
   const achievements = event.target.closest("[data-achievements-user]");
   if (achievements) {
     hideAchievementTooltip();
@@ -4654,6 +5226,8 @@ document.addEventListener("click", async (event) => {
   if (match) return toggleSquish(match.dataset.matchUser);
   const dm = event.target.closest("[data-dm-user]");
   if (dm) return openDm(dm.dataset.dmUser);
+  const storedDm = event.target.closest("[data-dm-handle]");
+  if (storedDm) return openStoredDm(storedDm.dataset.dmConversation, storedDm.dataset.dmHandle);
   const postAction = event.target.closest("[data-post-action]");
   if (postAction) return handlePostAction(postAction.dataset.postAction);
   if (event.target.closest("[data-prompt-reply]")) {
@@ -4664,6 +5238,11 @@ document.addEventListener("click", async (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideAchievementTooltip();
+  if (event.key === "Escape" && !notificationMenu.hidden) {
+    setNotificationMenuOpen(false);
+    notificationBadge.focus();
+    return;
+  }
   if (event.key === "Escape" && replyTargetId && composer.contains(document.activeElement)) {
     clearReplyTarget({ focus: true });
     return;

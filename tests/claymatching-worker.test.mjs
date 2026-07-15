@@ -1453,8 +1453,10 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(html, /data-account-sign-out/);
   assert.match(html, /data-compose-signal/);
   assert.match(html, /data-signal-inbox/);
-  assert.match(html, /data-mention-notifications/);
-  assert.match(html, /data-signal-notifications/);
+  assert.match(html, /data-notification-badge/);
+  assert.match(html, /data-notification-menu/);
+  assert.match(html, /data-notification-board/);
+  assert.match(html, /data-notification-signals/);
   assert.match(html, /data-signal-recipients/);
   assert.match(html, /data-reply-context/);
   assert.match(html, /data-cancel-reply/);
@@ -1527,6 +1529,10 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(styles, /\.custom-background-target-picker/);
   assert.match(styles, /\.custom-background-post-sample/);
   assert.match(styles, /\.notification-badge/);
+  assert.match(styles, /\.profile-notifications\s*\{[^}]*left:\s*-\d+px;[^}]*top:\s*-\d+px/);
+  assert.match(styles, /\.notification-badge\s*\{[^}]*min-height:\s*(?:4[4-9]|[5-9]\d)px[^}]*border-radius:\s*\d+%\s+\d+%/);
+  assert.match(styles, /\.notification-badge:focus-visible/);
+  assert.match(styles, /\.notification-menu\s*\{[^}]*position:\s*fixed/);
   assert.match(styles, /\.signal-inbox/);
   assert.match(styles, /\.mention-link/);
   const profileStatusCss = styles.match(/\.profile-status\s*\{([^}]*)\}/)?.[1] || "";
@@ -1539,6 +1545,54 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(styles, /\.profile-achievement-showcase\s*\{[^}]*display:\s*(?:grid|flex)[^}]*margin-top:/);
   assert.match(styles, /\.achievement-chip-showcase\s*\{[^}]*width:\s*100%[^}]*border:\s*2px solid var\(--ink\)/);
   assert.match(styles, /\.achievement-chip-showcase\[data-achievement-tone="(?:mint|sky|lavender|coral)"\]/);
+});
+
+test("claymatching combines sender-aware reply and encrypted Signal notifications at the profile avatar", async () => {
+  const [html, script, adapter] = await Promise.all([
+    readFile(new URL("../site/claymatching/index.html", import.meta.url), "utf8"),
+    readFile(new URL("../site/claymatching/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../site/apps/noctweave-web-core/noctweave-core-adapter.js", import.meta.url), "utf8"),
+  ]);
+  const render = script.match(
+    /function renderNotificationBadges\(\)[\s\S]*?\n}\n\nfunction updateSignalUnread/i,
+  )?.[0] || "";
+  const refreshInbox = script.match(
+    /async function refreshSignalInbox\([\s\S]*?\n}\n\nasync function resolveCurrentDmDevices/i,
+  )?.[0] || "";
+  const markThreadRead = script.match(
+    /async function markSignalThreadRead\([\s\S]*?\n}\n\nfunction shortAddress/i,
+  )?.[0] || "";
+
+  assert.equal((html.match(/data-notification-badge/g) || []).length, 1, "one combined badge should own the avatar notification count");
+  assert.match(html, /data-notification-badge[\s\S]*data-achievement-tooltip="notifications"[\s\S]*aria-haspopup="menu"/);
+  assert.match(html, /data-notification-menu[^>]*popover="manual"/);
+  assert.match(html, /data-notification-live[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.doesNotMatch(html, /data-mention-notifications|data-signal-notifications/);
+  assert.match(script, /function unreadBoardNotifications\(\)[\s\S]*actor_user_id[\s\S]*post_id/);
+  assert.match(script, /function notificationActorLabel\([\s\S]*profiles\.find[\s\S]*actor_user_id/);
+  assert.match(refreshInbox, /queueSignalOperation\([\s\S]*nextProfileByFingerprint[\s\S]*nextAmbiguousFingerprints/);
+  assert.match(script, /navigator\.locks\?\.request[\s\S]*claymatching-signal-log:/);
+  assert.match(script, /function signalCounterpartyFingerprint\([\s\S]*ownSignalFingerprints\.has\(contactFingerprint\)[\s\S]*recipientFingerprint/);
+  assert.match(script, /function signalMessageDirection\([\s\S]*ownSignalFingerprints\.has\(contactFingerprint\)[\s\S]*"outbox"/);
+  assert.match(script, /ambiguousFingerprints\.add\(fingerprint\)/);
+  assert.match(adapter, /export async function verifySignalContactCode\([\s\S]*verifyNativeContactOffer/);
+  assert.match(script, /function signalIdentityDisplayName\([\s\S]*SIGNAL_IDENTITY_DISPLAY_PREFIX[\s\S]*accountId/);
+  assert.match(script, /parseSignalIdentityDisplayName\(verified\?\.displayName\)/);
+  assert.match(script, /verified\.accountId !== expectedAccountId/);
+  assert.match(script, /claymatching-signal-identity:\$\{accountId\}/);
+  assert.match(script, /recipientContactCodes: verifiedRecipients\.map\(\(\{ device \}\) => device\.contact_code\)/);
+  assert.doesNotMatch(script, /recipientContactCodes: targetDevices\.map\(\(device\) => device\.contact_code\)/);
+  assert.match(script, /function signalNotificationActorLabel\([\s\S]*signalProfileForMessage/);
+  assert.match(render, /const total = boardItems\.length \+ signalItems\.length/);
+  assert.match(render, /notificationBadge\.dataset\.tooltip = parts\.join/);
+  assert.match(script, /notificationMenu\.addEventListener\("keydown"[\s\S]*ArrowDown[\s\S]*ArrowUp[\s\S]*\.focus\(\)/);
+  assert.match(script, /\.is\("read_at", null\)/);
+  assert.match(markThreadRead, /message\.unread[\s\S]*signalConversationIdentity\(message\)\.key[\s\S]*markSignalMessageIdsRead\(toMark\)/);
+  assert.match(adapter, /export async function markSignalMessagesRead\([\s\S]*loadSignalEnvelopeState\(record\)[\s\S]*state\.messages\.map[\s\S]*unread: false/);
+  assert.match(script, /signalCore\.markSignalMessagesRead\(/);
+  assert.doesNotMatch(script, /signalCore\.saveSignalMessageLog\(/);
+  assert.match(adapter, /unread: true,[\s\S]*direction,/);
+  assert.doesNotMatch(script, /markSeen|lastSeenSignalTime/);
 });
 
 test("claymatching email OTP uses its own single-use Turnstile proof", async () => {
@@ -2688,7 +2742,7 @@ test("claymatching Signals RLS and client identity creation both require live DM
     /create or replace function public\.resolve_clay_signal_devices[\s\S]*?\n\$\$;/i,
   )?.[0] || "";
   const initializeIdentity = app.match(
-    /async function initializeSignalIdentity\([\s\S]*?\n}\n\nasync function syncSignals/i,
+    /async function initializeSignalIdentityForAccount\([\s\S]*?\n}\n\nasync function initializeSignalIdentity/i,
   )?.[0] || "";
 
   assert.equal((signalPolicies.match(/public\.clay_current_user_can_dm\(\)/g) || []).length, 5);
@@ -2697,7 +2751,7 @@ test("claymatching Signals RLS and client identity creation both require live DM
   assert.match(migration, /if not public\.clay_user_can_dm\(raw_user_id\)[\s\S]*update public\.clay_signal_devices[\s\S]*set revoked_at/i);
 
   const guardIndex = initializeIdentity.indexOf("if (!dmAccessReady)");
-  const importIndex = initializeIdentity.indexOf("import(\"/apps/noctweave-web-core/noctweave-core-adapter.js\")");
+  const importIndex = initializeIdentity.indexOf("import(\"/apps/noctweave-web-core/noctweave-core-adapter.js");
   const createIndex = initializeIdentity.indexOf("createOrLoadSignalIdentity");
   assert.ok(guardIndex >= 0, "Noctweave identity initialization must have a DM-capability guard");
   assert.ok(importIndex > guardIndex, "the Noctweave module must not load before the DM-capability guard");
@@ -2743,7 +2797,7 @@ test("claymatching revalidates relay access and recipient authorization for ever
   assert.ok(sendAccessCheck >= 0, "each send must refresh the sender's live DM capability");
   assert.ok(sendDeviceCheck > sendAccessCheck, "each send must resolve current permitted recipient devices after checking capability");
   assert.ok(relaySend > sendDeviceCheck, "relay delivery must happen only after recipient authorization is re-resolved");
-  assert.match(sendDm, /recipientContactCodes: targetDevices\.map/);
+  assert.match(sendDm, /recipientContactCodes: verifiedRecipients\.map/);
   assert.doesNotMatch(sendDm, /recipientContactCodes: currentDmDevices\.map/);
 });
 
