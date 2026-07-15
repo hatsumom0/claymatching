@@ -1,0 +1,43 @@
+project_id = "jfpatuhroezchwjtsaga"
+
+[auth]
+site_url = "https://claymatching.luna21e8.xyz/"
+additional_redirect_urls = ["https://claymatching.luna21e8.xyz/"]
+enable_signup = true
+enable_manual_linking = true
+
+[auth.email]
+# Email may create a provisional Supabase user. Holder-only access is still
+# enforced by the Worker and database after a separate signed Solana proof.
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+max_frequency = "1m"
+otp_length = 6
+
+[auth.email.template.magic_link]
+subject = "Your Claymatching sign-in code"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your Claymatching email"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.web3.solana]
+enabled = true
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.passkey]
+enabled = true
+
+[auth.webauthn]
+rp_display_name = "Claymatching"
+rp_id = "claymatching.luna21e8.xyz"
+rp_origins = ["https://claymatching.luna21e8.xyz"]
+
+# Apple is enabled in the hosted dashboard only after its Services ID and
+# rotating client secret are available. Apple users are provisional until the
+# signed Solana holder proof succeeds. Never commit the Apple secret here.

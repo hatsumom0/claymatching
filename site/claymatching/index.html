@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f2df" />
+    <link rel="icon" href="/claymatching/favicon.svg" type="image/svg+xml" />
+    <meta
+      name="description"
+      content="An unofficial holder-made parody board for Claynosaurz collectors: forum threads, profiles, matching, and private signals."
+    />
+    <title>claymatching — the holder-made social board</title>
+    <link rel="stylesheet" href="/claymatching/styles.css?v=20260714-18" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">skip to the board</a>
+    <div class="ambient-shape ambient-shape-one" aria-hidden="true"></div>
+    <div class="ambient-shape ambient-shape-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Claymatching home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>
+          <b>claymatching</b>
+          <small>very serious social infrastructure</small>
+        </span>
+      </a>
+      <nav class="top-nav" aria-label="Primary navigation">
+        <button class="nav-tab is-active" data-view-button="board" type="button" aria-controls="board-view" aria-current="page">the board</button>
+        <button class="nav-tab" data-view-button="matching" type="button" aria-controls="matching-view">matching <span>beta-ish</span></button>
+        <button class="nav-tab" data-view-button="signals" type="button" aria-controls="signals-view">signals</button>
+      </nav>
+      <div class="wallet-area" data-account-area>
+        <span class="wallet-state" data-wallet-state>not connected</span>
+        <button class="clay-button clay-button-dark" data-wallet-button type="button" aria-expanded="false" aria-controls="account-menu">
+          <span class="button-dot" aria-hidden="true"></span>
+          connect wallet
+        </button>
+        <div class="account-menu" id="account-menu" data-account-menu role="menu" hidden>
+          <div>
+            <span>signed in as</span>
+            <b data-account-name>holder</b>
+            <small data-account-address></small>
+          </div>
+          <button data-account-profile type="button" role="menuitem">profile + my Claynos</button>
+          <button data-account-sign-out type="button" role="menuitem">sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <section class="welcome-strip" data-wallet-gate>
+        <div class="welcome-copy">
+          <h1>Claynosaurz had millions of years to evolve.<br />We made them a meeting app.</h1>
+          <p>
+            Connect your Solana wallet, pick a Clayno, write three facts and one lie, post absolute cave nonsense,
+            hunt for your trait twin, and see who else has impeccable taste in prehistoric collectibles.
+          </p>
+          <p class="welcome-punchline">Make friends. Start beef. Find love. Get ghosted by a dinosaur.</p>
+          <p class="welcome-tagline"><strong>A holder-made parody. A terrible idea. A natural next step.</strong></p>
+          <section class="returning-holder-auth entry-methods" id="entry-methods" aria-labelledby="returning-holder-title">
+            <div>
+              <span class="eyebrow">choose your way into the mud</span>
+              <h2 id="returning-holder-title">Start with a wallet, email, or Apple.</h2>
+              <p>Your private sign-in can begin with any one of these. An eligible read-only Solana address unlocks posting; a signed Solana or Sui wallet is required for private Signals.</p>
+            </div>
+            <div class="entry-method-grid">
+              <article class="entry-method-card entry-method-wallet">
+                <span class="entry-method-number" aria-hidden="true">01</span>
+                <h3>Solana wallet</h3>
+                <p>Fastest holder route. Sign a readable login message, then we check public Clayno ownership.</p>
+                <button class="clay-button clay-button-coral" data-connect-hero type="button">connect + verify wallet</button>
+              </article>
+              <article class="entry-method-card entry-method-email">
+                <span class="entry-method-number" aria-hidden="true">02</span>
+                <h3>Passwordless email</h3>
+                <p>Get a one-time code, then use an eligible public Solana address for read-only posting access or verify a wallet for Signals.</p>
+                <form class="email-signin-form" data-email-signin-form>
+                  <label><span>Private email</span><input name="email" type="email" autocomplete="email" placeholder="you@example.com" required /></label>
+                  <button class="clay-button clay-button-cream" type="submit">email me a code</button>
+                  <div class="otp-entry" data-email-otp-entry hidden>
+                    <label><span>Six-digit code</span><input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" aria-label="Six-digit email sign-in code" /></label>
+                    <button class="clay-button clay-button-coral" data-verify-email-code type="button">verify code</button>
+                    <button class="text-button otp-reset" data-reset-email-code type="button">use another email</button>
+                  </div>
+                </form>
+              </article>
+              <article class="entry-method-card entry-method-apple">
+                <span class="entry-method-number" aria-hidden="true">03</span>
+                <h3>Sign in with Apple</h3>
+                <p>Use Apple to start or restore an account, then add read-only Solana access or connect a wallet whenever you are ready.</p>
+                <button class="apple-auth-button" data-apple-signin type="button" aria-label="Continue with Apple">
+                  <img src="https://appleid.cdn-apple.com/appleid/button?color=black&amp;border_radius=12&amp;height=48&amp;locale=en_US&amp;scale=2&amp;type=continue&amp;width=260" alt="Continue with Apple" referrerpolicy="no-referrer" />
+                </button>
+              </article>
+            </div>
+            <div class="returning-passkey-row">
+              <div><b>Already made a passkey?</b><small>Returning community accounts can use it without an email code or wallet extension.</small></div>
+              <button class="passkey-button" data-passkey-signin type="button"><span aria-hidden="true">⌁</span> sign in with a passkey</button>
+            </div>
+            <small data-auth-entry-status role="status" aria-live="polite" aria-atomic="true">Choose one method. Email and Apple create a private sign-in; eligible read-only Solana unlocks posting, while a signed wallet unlocks Signals.</small>
+          </section>
+        </div>
+        <div class="safety-card">
+          <div class="safety-icon" aria-hidden="true">
+            <span></span>
+          </div>
+          <div>
+            <b>Wallet-safe by default</b>
+            <p>Login signature only—never a transaction, token approval, transfer, or seed phrase.</p>
+          </div>
+          <ul>
+            <li><span>01</span> We read public ownership data</li>
+            <li><span>02</span> Only verified collections are returned</li>
+            <li><span>03</span> DMs use the Noctweave encrypted relay</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="provisional-shell" data-provisional-shell aria-labelledby="provisional-title" hidden>
+        <header class="provisional-heading">
+          <div>
+            <span class="eyebrow">sign-in secured · choose your access</span>
+            <h1 id="provisional-title">Enter read-only or prove a wallet.</h1>
+            <p>An eligible public Solana address can unlock posting as a visibly self-attested account. Signing with Solana unlocks posting and Signals; read-only plus a signed Sui wallet does the same.</p>
+          </div>
+          <span class="provisional-lock-badge"><i aria-hidden="true"></i> COMMUNITY ACCESS LOCKED</span>
+        </header>
+
+        <div class="provisional-grid">
+          <article class="provisional-account-card">
+            <span class="entry-method-number" aria-hidden="true">✓</span>
+            <span class="eyebrow">your private entrance</span>
+            <h2 data-provisional-method>Private sign-in ready</h2>
+            <p data-provisional-identity>Your sign-in method is saved on this device.</p>
+            <ul>
+              <li><span aria-hidden="true">✓</span> Private sign-in persistence is on.</li>
+              <li><span aria-hidden="true">–</span> No posting source has been selected yet.</li>
+              <li><span aria-hidden="true">–</span> No collectible is public or selectable yet.</li>
+            </ul>
+            <a href="/claymatching/account-deletion/">account and deletion help</a>
+            <button class="text-button provisional-sign-out" data-provisional-sign-out type="button">sign out of this account</button>
+          </article>
+
+          <article class="provisional-wallet-card">
+            <span class="eyebrow">optional public look-up</span>
+            <h2>Solana collection preview</h2>
+            <p>Paste a public Solana address to preview eligible Claynos. Public data only—this does not prove the wallet is yours. If eligible, you may explicitly use it for read-only posting access.</p>
+            <form class="provisional-preview-form" data-provisional-preview-form>
+              <label for="provisional-solana-address">Public Solana address</label>
+              <div>
+                <input id="provisional-solana-address" data-provisional-address name="address" type="text" minlength="32" maxlength="44" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a public address" />
+                <button class="clay-button clay-button-cream" data-provisional-preview-submit type="submit">preview Claynos</button>
+              </div>
+            </form>
+            <small class="provisional-preview-privacy">Claymatching receives the address only when you press preview. NFT thumbnail hosts may receive an ordinary image request from your browser.</small>
+            <p class="provisional-preview-status" data-provisional-preview-status role="status" aria-live="polite" aria-atomic="true">No assets loaded. Nothing is queried until you paste a public address and press preview.</p>
+            <div class="provisional-preview-summary" data-provisional-preview-summary hidden>
+              <span>READ-ONLY · UNVERIFIED</span>
+              <b data-provisional-preview-count>0 Claynos found</b>
+            </div>
+            <div class="provisional-asset-grid" data-provisional-asset-grid aria-label="Read-only unverified Clayno preview" hidden></div>
+            <p class="provisional-preview-warning" data-provisional-preview-warning hidden>Preview images stay locked: they cannot become your avatar, verified-holder badge, or wallet credential. Read-only accounts are always labeled self-attested.</p>
+            <div class="provisional-read-only-callout" data-provisional-read-only-callout hidden>
+              <div>
+                <span class="eyebrow">post without signing</span>
+                <h3>Use this address in read-only mode.</h3>
+                <p>This unlocks profiles, posting, reactions, and matching. It does not prove ownership and cannot unlock private Signals by itself.</p>
+              </div>
+              <button class="clay-button clay-button-cream" data-provisional-read-only type="button">continue read-only</button>
+            </div>
+            <div class="provisional-verify-callout">
+              <div>
+                <span class="eyebrow">unlock the real thing</span>
+                <h3>Verify a wallet you control.</h3>
+                <p>Your wallet signs an exact readable ownership message—never a transaction, approval, transfer, or request for secret words.</p>
+              </div>
+              <button class="clay-button clay-button-coral" data-provisional-verify type="button">connect + verify Solana</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="app-shell" data-app-shell hidden>
+        <div class="app-loading" data-app-loading role="status" aria-live="polite" hidden>
+          <span aria-hidden="true">●</span>
+          <div><b>Opening the holder board…</b><small>Loading your mudprint, posts, matches, and Signals.</small></div>
+        </div>
+        <aside class="profile-column">
+          <article class="profile-card" data-profile-card data-background="dune">
+            <div class="profile-art" data-profile-art>
+              <div class="profile-notifications" data-profile-notifications aria-label="Unread notifications">
+                <button class="notification-badge notification-mention" data-mention-notifications type="button" data-tooltip="New tags and replies" aria-label="Open new tags and replies" hidden>
+                  <span aria-hidden="true">@</span><b data-mention-notification-count>0</b>
+                </button>
+                <button class="notification-badge notification-signal" data-signal-notifications type="button" data-tooltip="New private signals" aria-label="Open new private signals" hidden>
+                  <span aria-hidden="true">☽</span><b data-signal-notification-count>0</b>
+                </button>
+              </div>
+              <button class="profile-avatar-button" data-profile-avatar-button type="button" aria-label="Open your profile">
+                <span class="clay-avatar avatar-coral" data-profile-fallback aria-label="Original demo clay shape">
+                  <span class="clay-eye eye-one"></span>
+                  <span class="clay-eye eye-two"></span>
+                  <span class="clay-smile"></span>
+                </span>
+                <img data-profile-image alt="" hidden />
+              </button>
+              <span class="profile-status">online-ish</span>
+            </div>
+            <div class="profile-body">
+              <span class="eyebrow">your mudprint</span>
+              <h2 data-profile-name>@unnamed-clay</h2>
+              <span class="access-badge access-badge-read-only" data-profile-access-badge hidden>READ-ONLY · SELF-ATTESTED</span>
+              <div class="profile-featured-achievement" data-profile-featured-achievement hidden></div>
+              <div class="profile-achievement-showcase" data-profile-achievements hidden></div>
+              <div class="profile-collect-link" data-profile-collect-link hidden></div>
+              <p data-profile-bio>Here for the lore and suspiciously specific trait discourse.</p>
+              <div class="profile-tags" data-profile-tags>
+                <span>memes</span><span>friends</span>
+              </div>
+              <button class="clay-button clay-button-cream" data-edit-profile type="button">mold profile</button>
+            </div>
+          </article>
+
+          <article class="little-note" id="house-rules">
+            <span class="scribble" aria-hidden="true">↳</span>
+            <b>house rules</b>
+            <p>Be kind. No unsolicited wallet links. No trading in DMs. Report weird behavior; protect the herd.</p>
+          </article>
+        </aside>
+
+        <section class="content-column" id="board-view" data-view="board">
+          <header class="section-heading">
+            <div>
+              <span class="eyebrow">the communal puddle</span>
+              <h2>Board chatter</h2>
+            </div>
+            <div class="live-pill" data-live-count><i></i> holder board warming up</div>
+          </header>
+
+          <form class="composer" data-composer>
+            <div class="mini-avatar" data-composer-avatar><span>?</span></div>
+            <label>
+              <span class="sr-only">Write a post</span>
+              <textarea id="board-composer" name="post" maxlength="360" placeholder="What are we overthinking today?"></textarea>
+            </label>
+            <div class="reply-context" data-reply-context role="status" aria-live="polite" hidden>
+              <span id="reply-context-copy" data-reply-context-copy>Replying to a post</span>
+              <button data-cancel-reply type="button">cancel reply</button>
+            </div>
+            <div class="composer-footer">
+              <div class="background-picks" aria-label="Post background">
+                <button class="swatch swatch-dune is-selected" data-post-background="dune" type="button" aria-label="Dune background" aria-pressed="true"></button>
+                <button class="swatch swatch-mint" data-post-background="mint" type="button" aria-label="Mint background" aria-pressed="false"></button>
+                <button class="swatch swatch-sky" data-post-background="sky" type="button" aria-label="Sky background" aria-pressed="false"></button>
+                <button class="swatch swatch-lavender" data-post-background="lavender" type="button" aria-label="Lavender background" aria-pressed="false"></button>
+                <button class="swatch swatch-custom" data-post-background="custom" data-custom-post-background type="button" aria-label="Custom post image background" aria-pressed="false" title="Your saved custom post image" hidden></button>
+              </div>
+              <button class="clay-button clay-button-dark" data-composer-submit type="submit">squish post</button>
+            </div>
+          </form>
+
+          <div class="feed" data-feed><p class="empty-state">Sign in as a verified holder to load the board.</p></div>
+        </section>
+
+        <section class="content-column matching-view" id="matching-view" data-view="matching" hidden>
+          <header class="section-heading">
+            <div>
+              <span class="eyebrow">highly advanced clay science</span>
+              <h2>Potential mudmates</h2>
+            </div>
+            <select class="filter-pill" data-matching-filter aria-label="Filter potential mudmates by intention">
+              <option value="all">all intentions</option>
+              <option value="friends">friends</option>
+              <option value="memes">memes</option>
+              <option value="lore">lore</option>
+              <option value="dating">dating</option>
+            </select>
+          </header>
+          <div class="matching-grid" data-matching-grid><p class="empty-state">No holder profiles yet. Be the first weird one.</p></div>
+        </section>
+
+        <section class="content-column signals-view" id="signals-view" data-view="signals" hidden>
+          <header class="section-heading">
+            <div>
+              <span class="eyebrow">sealed under the moon</span>
+              <h2>Private signals</h2>
+            </div>
+            <span class="encrypted-pill" aria-label="Relay live, end-to-end encrypted">RELAY LIVE - END TO END ENCRYPTED</span>
+          </header>
+          <article class="signals-intro" data-signals-intro>
+            <div class="signal-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="eyebrow">powered by the Noctweave fork</span>
+            <h3>DM without turning the board into a wallet scam convention.</h3>
+            <p>
+              Private messages are sealed on your device before they reach the relay. The relay carries encrypted data;
+              it cannot read the conversation. Never use DMs to trade or sign wallet requests.
+            </p>
+            <div class="signal-actions">
+              <button class="clay-button clay-button-coral" data-compose-signal type="button">compose signal☽</button>
+              <button class="clay-button clay-button-cream" data-open-signals type="button">check encrypted inbox</button>
+            </div>
+            <p class="signal-directory-status" data-signal-status role="status" aria-live="polite" aria-atomic="true" tabindex="-1">Encrypted messaging is prepared on this device after your profile is saved.</p>
+          </article>
+          <article class="signals-lock" data-signals-lock hidden>
+            <span aria-hidden="true">☽</span>
+            <div>
+              <span class="eyebrow">one signed wallet required</span>
+              <h3>Posting is open. Private Signals are still sealed.</h3>
+              <p>Your read-only Solana address never counts as wallet proof. Sign with Solana or link and sign a Sui wallet in your profile to unlock encrypted DMs.</p>
+              <button class="clay-button clay-button-coral" data-open-wallet-links type="button">open wallet links</button>
+            </div>
+          </article>
+          <section class="signal-inbox" data-signal-inbox hidden>
+            <header>
+              <h3 data-signal-inbox-heading tabindex="-1">Your signal inbox</h3>
+              <button class="clay-button clay-button-coral" data-compose-signal type="button">compose signal☽</button>
+            </header>
+            <p class="signal-inbox-note">Conversations are decrypted only on this device. Select a creature to open the thread.</p>
+            <div class="signal-inbox-list" data-signal-inbox-list></div>
+          </section>
+          <section class="signal-directory" data-signal-directory aria-labelledby="signal-directory-heading" hidden>
+            <header>
+              <div><span class="eyebrow">choose a mutual</span><h3 id="signal-directory-heading" data-signal-directory-heading tabindex="-1">Who gets the signal?</h3></div>
+              <button class="text-button" data-close-signal-directory type="button">close</button>
+            </header>
+            <div class="signal-recipient-list" data-signal-recipients></div>
+          </section>
+          <div class="signal-guardrails">
+            <div><span>01</span><b>No clickable wallet asks</b><p>Signal messages stay plain text; pasted links are never turned into clickable buttons.</p></div>
+            <div><span>02</span><b>Mutual before contact</b><p>Both creatures must squish each other before a new Signal can be sent.</p></div>
+            <div><span>03</span><b>Relay carries ciphertext</b><p>Message bodies are encrypted on your device before the relay sees them.</p></div>
+          </div>
+        </section>
+
+        <aside class="people-column">
+          <header><div><span class="eyebrow">soft launch</span><h2>Good weirdos</h2></div><button type="button" data-view-shortcut="matching">see all</button></header>
+          <div class="people-stack" data-people-stack><p class="empty-state">The herd is still arriving.</p></div>
+          <article class="prompt-card">
+            <span>today's extremely important prompt</span>
+            <b>What trait tells you someone returns their shopping cart?</b>
+            <button data-prompt-reply type="button">answer recklessly →</button>
+          </article>
+          <p class="unofficial-note">Unofficial. Holder-made. Not affiliated with or endorsed by Claynosaurz.</p>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <small>copyright luna 2026</small>
+      <nav aria-label="Claymatching policies and help">
+        <a href="#house-rules">house rules</a>
+        <a href="/privacy/">privacy</a>
+        <a href="/claymatching/account-deletion/">delete account</a>
+      </nav>
+    </footer>
+
+    <dialog class="clay-dialog consent-dialog" data-consent-dialog aria-labelledby="consent-dialog-title">
+      <form data-consent-form>
+        <header>
+          <div><span class="eyebrow">before the mud</span><h2 id="consent-dialog-title">Holder gate + house promise</h2></div>
+          <button class="dialog-close" data-consent-close type="button" aria-label="Close">×</button>
+        </header>
+        <p class="consent-lead">This is an unofficial, non-commercial, holder-made social experiment. Your wallet signs a readable login or ownership message only—never a transaction.</p>
+        <div class="consent-checks">
+          <label><input name="adult" type="checkbox" required /><span>I am 18 or older.</span></label>
+          <label><input name="holder" type="checkbox" required /><span>I currently hold an eligible Claynosaurz asset and understand ownership is rechecked.</span></label>
+          <label><input name="lawful" type="checkbox" required /><span>I will not use Claymatching for scams, trading solicitations, harassment, illegal activity, or prohibited content.</span></label>
+        </div>
+        <div class="turnstile-shell" data-turnstile></div>
+        <p class="consent-status" data-consent-status role="status" aria-live="polite" aria-atomic="true">Complete the checks, then sign the login message in your wallet.</p>
+        <footer>
+          <small>Terms version 2026-07-13 · self-attestation is not formal identity or age verification.</small>
+          <button class="clay-button clay-button-coral" type="submit">agree + verify holder</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="clay-dialog profile-dialog" data-profile-dialog aria-labelledby="profile-dialog-title">
+      <form method="dialog" data-profile-form>
+        <header>
+          <div><span class="eyebrow">identity, but make it squishy</span><h2 id="profile-dialog-title">Mold your profile</h2></div>
+          <button class="dialog-close" value="cancel" type="submit" formnovalidate aria-label="Close">×</button>
+        </header>
+        <div class="dialog-grid">
+          <section>
+            <label class="field-label">Username <small>3–20 characters</small><input name="username" minlength="3" maxlength="20" pattern="[a-zA-Z0-9_-]+" autocomplete="off" required /></label>
+            <fieldset class="featured-achievement-picker" data-featured-achievement-picker hidden>
+              <legend>Featured achievement</legend>
+              <small data-featured-achievement-status>Choose one achievement from your latest successful wallet-matched SYNC.</small>
+              <div class="featured-achievement-options" data-featured-achievement-options></div>
+            </fieldset>
+            <label class="field-label">Tiny bio <small>140 characters</small><textarea name="bio" maxlength="140"></textarea></label>
+            <fieldset class="intent-picker">
+              <legend>Here for</legend>
+              <label><input type="checkbox" name="intent" value="friends" /><span>friends</span></label>
+              <label><input type="checkbox" name="intent" value="memes" /><span>memes</span></label>
+              <label><input type="checkbox" name="intent" value="lore" /><span>lore</span></label>
+              <label><input type="checkbox" name="intent" value="dating" /><span>dating</span></label>
+            </fieldset>
+          </section>
+          <section>
+            <fieldset class="avatar-picker">
+              <legend>Your avatar</legend>
+              <div class="avatar-collection-switcher" role="group" aria-label="Choose an avatar collection">
+                <button class="avatar-collection-button is-active" type="button" data-avatar-collection="clayno" aria-pressed="true" aria-controls="avatar-collection-options">
+                  <span>Claynos</span><span class="avatar-collection-count" data-avatar-clayno-count>0</span>
+                </button>
+                <button class="avatar-collection-button" type="button" data-avatar-collection="popkin" aria-pressed="false" aria-controls="avatar-collection-options">
+                  <span>Popkins</span><span class="avatar-collection-count" data-avatar-popkin-count>0</span>
+                </button>
+              </div>
+              <div data-asset-status role="status" aria-live="polite" aria-atomic="true">Connect a wallet to load verified owned collectibles. Demo shapes are available now.</div>
+              <div class="avatar-options" id="avatar-collection-options" data-avatar-options></div>
+            </fieldset>
+            <fieldset class="banner-picker">
+              <legend>Profile background</legend>
+              <label class="banner-dune"><input type="radio" name="background" value="dune" checked /><span>dune</span></label>
+              <label class="banner-mint"><input type="radio" name="background" value="mint" /><span>mint</span></label>
+              <label class="banner-sky"><input type="radio" name="background" value="sky" /><span>sky</span></label>
+              <label class="banner-lavender"><input type="radio" name="background" value="lavender" /><span>lavender</span></label>
+              <label class="banner-custom" data-custom-background-preview data-custom-profile-background-preview><input type="radio" name="background" value="custom" /><span>custom</span></label>
+            </fieldset>
+            <fieldset class="custom-background-editor" data-custom-background-editor>
+              <legend>Custom image background</legend>
+              <p>Choose which canvas you are decorating. Profile and post images are saved separately.</p>
+              <div class="custom-background-target-picker" aria-label="Custom background destination">
+                <label><input type="radio" name="customBackgroundTarget" value="profile" checked /><span>profile background</span></label>
+                <label><input type="radio" name="customBackgroundTarget" value="post" /><span>post background</span></label>
+              </div>
+              <div class="custom-background-panel" data-custom-background-panel="profile">
+                <label class="field-label custom-background-field">Profile image URL <small>Used only for your profile art when “custom” is selected above.</small><input name="customProfileBackgroundUrl" type="url" inputmode="url" maxlength="2048" placeholder="https://images.example.com/profile-background.jpg" /></label>
+                <div class="custom-background-sample custom-background-profile-sample" data-custom-profile-background-sample><span>profile art preview</span></div>
+              </div>
+              <div class="custom-background-panel" data-custom-background-panel="post" hidden>
+                <label class="field-label custom-background-field">Post image URL <small>Saving this adds a custom swatch to the board composer. Each custom post keeps the image it was posted with.</small><input name="customPostBackgroundUrl" type="url" inputmode="url" maxlength="2048" placeholder="https://images.example.com/post-background.jpg" /></label>
+                <div class="custom-background-sample custom-background-post-sample" data-custom-post-background-sample><span>post card preview</span></div>
+              </div>
+              <small class="custom-background-privacy">Use direct HTTPS image URLs from a host you trust. The image host may see visitors load the image.</small>
+            </fieldset>
+          </section>
+        </div>
+        <section class="mudprint-links" aria-labelledby="mudprint-links-title">
+          <header>
+          <div><span class="eyebrow">more ways back to the herd</span><h3 id="mudprint-links-title">Mudprint links</h3></div>
+            <p>Read-only Solana can unlock posting. A signed Solana or Sui wallet unlocks Signals. Collect and Popkins checks happen only when you press their buttons.</p>
+          </header>
+          <div class="mudprint-link-grid">
+            <article class="mudprint-link-card mudprint-wallet-card">
+              <span class="mudprint-link-icon" aria-hidden="true">◎</span>
+              <div class="mudprint-link-copy">
+                <b>Solana wallet</b>
+                <small data-linked-wallet>holder wallet linked</small>
+                <button class="clay-button clay-button-coral" data-link-solana-wallet type="button" hidden>connect + sign Solana</button>
+              </div>
+              <span class="link-state is-linked" data-solana-link-state>origin mudprint</span>
+            </article>
+            <article class="mudprint-link-card mudprint-sui-card">
+              <span class="mudprint-link-icon mudprint-sui-icon" aria-hidden="true">≈</span>
+              <div class="mudprint-link-copy">
+                <b>Sui + Popkins</b>
+                <small>Connect Sui, then sign a readable ownership message—never a transaction, approval, or transfer. For a read-only Solana account, this signed Sui link also unlocks private Signals.</small>
+                <div class="sui-link-controls">
+                  <mysten-dapp-kit-connect-button data-sui-connect>
+                    <span>connect Sui wallet</span>
+                  </mysten-dapp-kit-connect-button>
+                  <button class="clay-button clay-button-coral" data-link-sui-wallet type="button" hidden>link this Sui wallet</button>
+                  <button class="clay-button clay-button-cream" data-sync-popkins type="button" hidden>check Popkins</button>
+                  <button class="text-button" data-unlink-sui-wallet type="button" hidden>unlink</button>
+                </div>
+                <div class="popkins-connection-badge" data-popkins-connection-badge hidden>
+                  <span aria-hidden="true">✦</span><b data-popkins-connection-count>0 Popkins</b>
+                </div>
+                <small class="sui-wallet-status" data-sui-wallet-status role="status" aria-live="polite" aria-atomic="true">Connect an installed Sui wallet to begin. A linked address stays private.</small>
+                <small class="sui-coverage-note">Manual checks include Popkins held directly in your wallet, in owned Sui Kiosks, or in the supported staking contract.</small>
+              </div>
+              <span class="link-state" data-sui-link-state>not linked</span>
+            </article>
+            <article class="mudprint-link-card mudprint-email-card">
+              <span class="mudprint-link-icon" aria-hidden="true">✉</span>
+              <div class="mudprint-link-copy">
+                <b>Passwordless email + passkey</b>
+                <small data-linked-email-status>Add and confirm a private email first. No password is ever created.</small>
+                <div class="link-email-controls">
+                  <input data-link-email-input type="email" autocomplete="email" placeholder="you@example.com" aria-label="Email to link" />
+                  <button class="clay-button clay-button-cream" data-link-email type="button">send email confirmation</button>
+                </div>
+                <div class="profile-email-otp" data-link-email-otp hidden>
+                  <label><span>Code sent to</span><select data-link-email-code-address aria-label="Inbox that received this code"></select></label>
+                  <label><span>Six-digit code</span><input data-link-email-code type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" aria-label="Six-digit email confirmation code" /></label>
+                  <button class="clay-button clay-button-coral" data-verify-link-email type="button">verify code</button>
+                </div>
+                <ol class="passkey-steps" aria-label="Passkey setup steps">
+                  <li><span>1</span> Confirm your private email with the code or secure link we send.</li>
+                  <li><span>2</span> Add a passkey with Face ID, Touch ID, a device PIN, or a security key.</li>
+                  <li><span>3</span> Next time, sign in with the passkey—no email or password needed.</li>
+                </ol>
+                <button class="passkey-button passkey-button-small" data-register-passkey type="button">create a passkey on this device</button>
+              </div>
+              <span class="link-state" data-email-link-state>not linked</span>
+            </article>
+            <article class="mudprint-link-card mudprint-apple-card">
+              <span class="mudprint-link-icon" aria-hidden="true">●</span>
+              <div class="mudprint-link-copy">
+                <b>Sign in with Apple</b>
+                <small data-linked-apple-status>Attach Apple privately to this holder account.</small>
+                <button class="apple-auth-button apple-auth-button-small" data-link-apple type="button" aria-label="Continue with Apple">
+                  <img src="https://appleid.cdn-apple.com/appleid/button?color=black&amp;border_radius=12&amp;height=48&amp;locale=en_US&amp;scale=2&amp;type=continue&amp;width=260" alt="Continue with Apple" referrerpolicy="no-referrer" />
+                </button>
+              </div>
+              <span class="link-state" data-apple-link-state>not linked</span>
+            </article>
+            <article class="mudprint-link-card mudprint-collect-card">
+              <span class="mudprint-link-icon" aria-hidden="true">↗</span>
+              <div class="mudprint-link-copy">
+                <b>Claynosaurz Collect profile</b>
+                <small>Paste and save the self-attested profile first. SYNC then matches your signed Solana address against that Collect profile and imports only earned achievements. User-triggered and unofficial.</small>
+                <div class="collect-link-controls">
+                  <input data-collect-profile-input type="text" inputmode="url" autocomplete="off" spellcheck="false" maxlength="256" placeholder="Collect profile URL, achievement API URL, or user ID" aria-label="Claynosaurz Collect profile URL or user ID" />
+                  <button class="clay-button clay-button-cream" data-save-collect-profile type="button">self-attest link</button>
+                  <button class="clay-button clay-button-coral" data-sync-collect-achievements type="button" hidden>SYNC achievements</button>
+                  <button class="text-button" data-unlink-collect-profile type="button" hidden>unlink</button>
+                </div>
+                <div class="collect-profile-preview" data-collect-profile-link hidden></div>
+                <small class="collect-profile-status" data-collect-profile-status role="status" aria-live="polite" aria-atomic="true">Paste your Collect profile URL, achievements API URL, or user ID, save it, then press SYNC manually.</small>
+              </div>
+              <span class="link-state" data-collect-link-state>not linked</span>
+            </article>
+          </div>
+          <p class="mudprint-link-status" data-mudprint-link-status role="status" aria-live="polite" aria-atomic="true">Wallet and sign-in links stay private. Collect SYNC and Popkins checks are manual and never request a transaction.</p>
+        </section>
+        <footer>
+          <span data-profile-storage-note>Saved to your holder account. Your private wallet address is not displayed.</span>
+          <button class="clay-button clay-button-coral" value="default" type="submit">save this creature</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="clay-dialog member-profile-dialog" data-member-profile-dialog aria-labelledby="member-profile-title">
+      <article class="member-profile-card" data-member-profile-card data-background="dune">
+        <button class="dialog-close" data-member-profile-close type="button" aria-label="Close">×</button>
+        <div class="member-profile-visual" data-member-profile-avatar></div>
+        <div class="member-profile-copy">
+          <span class="eyebrow" data-member-profile-eyebrow>verified mudprint</span>
+          <h2 id="member-profile-title" data-member-profile-name>@holder</h2>
+          <div class="member-featured-achievement" data-member-featured-achievement hidden></div>
+          <span class="member-account-state" data-member-account-state>active holder</span>
+          <div class="member-profile-collect-link" data-member-profile-collect-link hidden></div>
+          <p data-member-profile-bio>This creature has not written a bio yet.</p>
+          <div class="profile-tags" data-member-profile-tags></div>
+          <div class="member-profile-actions">
+            <button class="clay-button clay-button-coral" data-member-match type="button">squish</button>
+            <button class="clay-button clay-button-dark" data-member-signal type="button">send signal☽</button>
+          </div>
+          <section class="member-admin-panel" data-member-admin-panel hidden>
+            <span class="eyebrow">admin moderation</span>
+            <h3>Keep the herd safe</h3>
+            <p>Suspension is reversible. A ban removes the account from matching and blocks normal participation.</p>
+            <label class="field-label">Reason <textarea data-member-admin-reason maxlength="1000" placeholder="Harassment, scam attempt, repeated rule violations…"></textarea></label>
+            <div>
+              <button class="clay-button clay-button-cream" data-admin-member-state="active" type="button">restore account</button>
+              <button class="clay-button clay-button-dark" data-admin-member-state="suspended" type="button">suspend account</button>
+              <button class="clay-button clay-button-coral" data-admin-member-state="banned" type="button">ban account</button>
+            </div>
+            <small data-member-admin-status role="status" aria-live="polite" aria-atomic="true">Moderation actions are logged.</small>
+          </section>
+        </div>
+      </article>
+    </dialog>
+
+    <dialog class="clay-dialog action-dialog" data-action-dialog aria-labelledby="action-dialog-title" aria-describedby="action-dialog-copy">
+      <form data-action-form>
+        <header>
+          <div>
+            <span class="eyebrow" data-action-eyebrow>one careful tap</span>
+            <h2 id="action-dialog-title" data-action-title>Are you sure?</h2>
+          </div>
+          <button class="dialog-close" data-action-close type="button" aria-label="Close without continuing">×</button>
+        </header>
+        <p class="action-dialog-copy" id="action-dialog-copy" data-action-copy>Check the details before continuing.</p>
+        <label class="field-label action-dialog-category" data-action-category-wrap hidden>
+          What happened?
+          <select data-action-category>
+            <option value="spam">spam or flooding</option>
+            <option value="harassment">harassment</option>
+            <option value="scam">scam or wallet solicitation</option>
+            <option value="illegal">illegal activity</option>
+            <option value="adult_safety">adult-safety concern</option>
+            <option value="other" selected>something else</option>
+          </select>
+        </label>
+        <label class="field-label action-dialog-detail" data-action-detail-wrap hidden>
+          A note for the moderators <small>Optional, but specifics help. 1,000 characters maximum.</small>
+          <textarea data-action-detail maxlength="1000" placeholder="Tell the moderators what happened…"></textarea>
+        </label>
+        <footer>
+          <button class="clay-button clay-button-cream" data-action-cancel type="button">not now</button>
+          <button class="clay-button clay-button-coral" data-action-confirm type="submit">continue</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="clay-dialog achievement-dialog" data-achievement-dialog aria-labelledby="achievement-dialog-title">
+      <article>
+        <button class="dialog-close" data-achievement-close type="button" aria-label="Close achievement cabinet">×</button>
+        <span class="eyebrow">user-triggered collect sync</span>
+        <h2 id="achievement-dialog-title" data-achievement-title>Achievement cabinet</h2>
+        <p class="achievement-dialog-status" data-achievement-status>Wallet-matched, unofficial achievement snapshot.</p>
+        <div class="achievement-dialog-source" data-achievement-source hidden></div>
+        <div class="achievement-grid" data-achievement-grid aria-live="polite"></div>
+        <p class="achievement-disclaimer">This is an unofficial holder tool. The snapshot appears only after Claymatching matches the signed SIWS Solana address to the linked wallet list returned by Collect.</p>
+      </article>
+    </dialog>
+
+    <dialog class="clay-dialog dm-dialog" data-dm-dialog aria-labelledby="dm-dialog-title">
+      <form data-dm-form>
+        <button class="dialog-close" data-dm-close type="button" aria-label="Close">×</button>
+        <div class="dm-seal" aria-hidden="true">☽</div>
+        <span class="eyebrow">private signal</span>
+        <h2 id="dm-dialog-title" data-dm-title>Signal this creature?</h2>
+        <div class="dm-collect-link" data-dm-collect-link hidden></div>
+        <p data-dm-copy>A mutual squish unlocks this end-to-end encrypted conversation.</p>
+        <div class="dm-thread" data-dm-thread><p class="empty-state">No signals with this creature yet.</p></div>
+        <label class="field-label">Sealed message <textarea name="message" maxlength="600" required placeholder="Say something kind and non-transactional…"></textarea></label>
+        <div class="dm-warning"><b>Keep trades out of DMs.</b><span>No one legitimate needs your seed phrase, wallet approval, or a “verification transaction.”</span></div>
+        <p class="dm-status" data-dm-status role="status" aria-live="polite" aria-atomic="true">Message encryption stays on this device. The relay receives unreadable encrypted data only.</p>
+        <button class="clay-button clay-button-dark" type="submit">send encrypted signal☽</button>
+      </form>
+    </dialog>
+
+    <div id="achievement-tooltip" class="achievement-tooltip" data-achievement-tooltip-layer role="tooltip" popover="manual" hidden></div>
+    <div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.3/dist/umd/supabase.js"
+      integrity="sha384-sihuiVHG7vyEIuePVbLI4QpHu1dbhCZe4Zqp0FuqnFeEnyIhF3koyXoBZyfbFsYs"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <script type="module" src="/claymatching/app.js?v=20260714-18"></script>
+  </body>
+</html>

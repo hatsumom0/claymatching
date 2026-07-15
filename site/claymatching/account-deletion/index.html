@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+    <link rel="icon" href="/claymatching/favicon.svg" type="image/svg+xml" />
+    <title>Delete your Claymatching account</title>
+    <style>
+      @font-face {
+        font-family: "Clay Bubble";
+        src: url("../fonts/TitanOne-Regular.ttf") format("truetype");
+        font-display: swap;
+      }
+
+      :root {
+        color-scheme: light;
+        --ink: #18372c;
+        --paper: #fffdf3;
+        --cream: #faf4da;
+        --coral: #f78169;
+        --mint: #a9dcb1;
+        --yellow: #ffdb58;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: clamp(20px, 5vw, 72px);
+        background:
+          radial-gradient(circle at 8% 90%, rgba(169, 220, 177, 0.5) 0 13%, transparent 13.2%),
+          radial-gradient(circle at 100% 20%, rgba(247, 129, 105, 0.34) 0 15%, transparent 15.2%),
+          var(--cream);
+        color: var(--ink);
+        font: 18px/1.55 system-ui, sans-serif;
+      }
+
+      main {
+        width: min(760px, 100%);
+        padding: clamp(28px, 6vw, 64px);
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        border-radius: 44px 38px 48px 40px;
+        box-shadow: 0 14px 0 rgba(24, 55, 44, 0.22);
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: #ca4b3d;
+        font-family: "Clay Bubble", system-ui, sans-serif;
+        font-size: 0.9rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1, h2, button, .button {
+        font-family: "Clay Bubble", system-ui, sans-serif;
+        font-weight: 400;
+      }
+
+      h1 { margin: 0; font-size: clamp(2.5rem, 8vw, 5rem); line-height: 0.98; }
+      h2 { margin: 30px 0 8px; font-size: 1.45rem; }
+      p { margin: 12px 0; }
+      ul { padding-left: 1.35em; }
+
+      .notice {
+        margin: 28px 0;
+        padding: 18px 20px;
+        background: rgba(255, 219, 88, 0.45);
+        border: 2px solid var(--ink);
+        border-radius: 20px 17px 22px 18px;
+      }
+
+      .actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+      button, .button {
+        min-height: 54px;
+        padding: 13px 20px;
+        border: 2px solid var(--ink);
+        border-radius: 999px;
+        box-shadow: 0 5px 0 var(--ink);
+        color: var(--ink);
+        font-size: 1rem;
+        line-height: 1.1;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      button { background: var(--coral); }
+      .button { background: var(--paper); }
+      button:focus-visible, .button:focus-visible { outline: 4px solid var(--mint); outline-offset: 4px; }
+      .helper { color: #4f685f; font-size: 0.94rem; }
+      footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(24, 55, 44, 0.25); }
+      footer a { color: inherit; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">account exit, no fossil required</p>
+      <h1>Leave the mud</h1>
+      <p>You can permanently delete your Claymatching account and its server-side profile data.</p>
+
+      <div class="notice">
+        <strong>For now, deletion requests are handled manually.</strong>
+        Nothing is deleted just by opening this page or drafting an email. We will verify the request with the account’s linked email before deleting anything.
+      </div>
+
+      <h2>What to do</h2>
+      <ol>
+        <li>Use the email address linked to your Claymatching account.</li>
+        <li>Open the prepared request below and include your Claymatching username.</li>
+        <li>We will reply with the final verification step before permanent deletion.</li>
+      </ol>
+
+      <p class="helper">A public username is enough to begin the request, and deletion never requires a transaction. If you used Apple’s private email relay, send from that relay address when possible.</p>
+
+      <div class="actions">
+        <button type="button" data-delete-email>draft deletion request</button>
+        <a class="button" href="/claymatching/">keep my account</a>
+      </div>
+
+      <footer>
+        <p>If you used Sign in with Apple, you can also remove Claymatching from <a href="https://support.apple.com/102571" rel="noreferrer">Apple’s authorization settings</a> after server deletion is confirmed.</p>
+        <p class="helper">Support: luna@luna21e8.xyz</p>
+      </footer>
+    </main>
+    <script>
+      document.querySelector("[data-delete-email]").addEventListener("click", () => {
+        const subject = "Claymatching account deletion request";
+        const body = [
+          "Please begin permanent deletion of my Claymatching account.",
+          "",
+          "Claymatching username:",
+          "",
+          "I understand that nothing is deleted until the request is verified.",
+        ].join("\n");
+        window.location.href = `mailto:luna@luna21e8.xyz?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      });
+    </script>
+  </body>
+</html>

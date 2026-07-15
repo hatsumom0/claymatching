@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+
+  "name": "claymatching",
+  "main": "worker/claymatching.js",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "claymatching.luna21e8.xyz",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/", "/api/*", "/relay", "/health", "/info"],
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NOCTWEAVE_RELAY",
+        "class_name": "LunaNoctweaveRelay",
+        "script_name": "luna21e8"
+      }
+    ]
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://claymatching.luna21e8.xyz",
+    "CLAYMATCHING_COLLECTION_IDS": "6mszaj17KSfVqADrQj3o4W3zoLMTykgmV37W4QadCczK,1yPMtWU5aqcF72RdyRD5yipmcMRC8NGNK59NvYubLkZ",
+    "CLAYMATCHING_HOSTS": "claymatching.luna21e8.xyz",
+    "SUI_GRAPHQL_URL": "https://graphql.mainnet.sui.io/graphql",
+    "SUPABASE_URL": "https://jfpatuhroezchwjtsaga.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_DZP4Vq_sc2XsbKUdLlANqw_qehrgjj-",
+    "NOCTWEAVE_RELAY_OBJECT_NAME": "luna-default-relay",
+    "NOCTWEAVE_RELAY_NAME": "Luna Claymatching Encrypted Relay",
+    "NOCTWEAVE_RELAY_URL": "https://claymatching.luna21e8.xyz/relay",
+    "NOCTWEAVE_FEDERATION_MODE": "solo",
+    "NOCTWEAVE_FEDERATION_NAME": "luna-claymatching",
+    "NOCTWEAVE_FEDERATION_FORWARDING_ENABLED": "false",
+    "NOCTWEAVE_FEDERATION_ALLOW_LIVE_REGISTRATION": "false",
+    "NOCTWEAVE_ALLOW_PRIVATE_FEDERATION_ENDPOINTS": "false"
+  }
+}
