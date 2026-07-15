@@ -1294,7 +1294,8 @@ async function createEmailTurnstile() {
     emailTurnstileWidgetId = window.turnstile.render(emailTurnstileHost, {
       sitekey: TURNSTILE_SITE_KEY,
       action: "email_otp",
-      appearance: "interaction-only",
+      execution: "render",
+      appearance: "always",
       size: "compact",
       theme: "light",
       "response-field": false,
@@ -1310,15 +1311,35 @@ async function createEmailTurnstile() {
         emailCaptchaToken = "";
         setEmailTurnstileStatus("The human check timed out. Complete the refreshed check.", { error: true });
       },
-      "error-callback"() {
+      "before-interactive-callback"() {
+        setEmailTurnstileStatus("Cloudflare needs one quick check below.");
+      },
+      "unsupported-callback"() {
         emailCaptchaToken = "";
-        setEmailTurnstileStatus("The human check could not finish. Refresh and try again.", { error: true });
+        setEmailTurnstileStatus("This browser cannot run the human check. Try a current browser without strict content blocking.", { error: true });
+      },
+      "error-callback"(errorCode) {
+        emailCaptchaToken = "";
+        const safeCode = String(errorCode || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+        const codeHint = safeCode ? ` (${safeCode})` : "";
+        setEmailTurnstileStatus(`The human check could not finish${codeHint}. Refresh and try again.`, { error: true });
       },
     });
   } catch {
     emailTurnstileWidgetId = undefined;
     setEmailTurnstileStatus("The human check could not start. Refresh and try again.", { error: true });
   }
+}
+
+function readEmailCaptchaToken() {
+  if (emailCaptchaToken) return emailCaptchaToken;
+  if (!window.turnstile || emailTurnstileWidgetId === undefined) return "";
+  try {
+    emailCaptchaToken = window.turnstile.getResponse(emailTurnstileWidgetId) || "";
+  } catch {
+    emailCaptchaToken = "";
+  }
+  return emailCaptchaToken;
 }
 
 function resetEmailTurnstile() {
@@ -1344,14 +1365,14 @@ async function requestEmailCode(event) {
     setAuthEntryStatus("Account service did not load. Refresh before requesting a code.", { error: true });
     return;
   }
-  if (!emailCaptchaToken) {
-    await renderEmailTurnstile();
-    setAuthEntryStatus("Complete the quick human check, then request the email code again.", { error: true });
+  await renderEmailTurnstile();
+  const captchaProof = readEmailCaptchaToken();
+  if (!captchaProof) {
+    setAuthEntryStatus("Complete the visible human check, then request the email code again.", { error: true });
     return;
   }
   const email = emailSigninForm.elements.email.value.trim().toLowerCase();
   const submitButton = emailSigninForm.querySelector('button[type="submit"]');
-  const captchaProof = emailCaptchaToken;
   setBusy(submitButton, true, "sending code…");
   setAuthEntryStatus("Sending a private one-time sign-in code…");
   let error;
@@ -1371,9 +1392,10 @@ async function requestEmailCode(event) {
     setBusy(submitButton, false);
   }
   if (error) {
-    const message = /captcha/i.test(error.message || "")
+    const providerMessage = readableErrorMessage(error, "That email could not receive a sign-in code.");
+    const message = /captcha/i.test(providerMessage)
       ? "The human check expired before Supabase accepted it. Complete the refreshed check and try again."
-      : error.message || "That email could not receive a sign-in code.";
+      : providerMessage;
     setAuthEntryStatus(message, { error: true });
     return;
   }

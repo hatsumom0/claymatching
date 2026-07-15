@@ -388,7 +388,7 @@ button { color: inherit; }
 .email-human-check { width: 100%; display: grid; justify-items: center; gap: 7px; padding: 10px; background: rgba(164, 216, 175, 0.22); border: 1px dashed rgba(24, 55, 44, 0.34); border-radius: 14px; }
 .email-human-check small { color: var(--ink-soft); font-size: 12px; line-height: 1.35; text-align: center; }
 .email-human-check small.is-error { color: var(--danger); }
-.email-turnstile-shell { min-width: 150px; min-height: 0; display: grid; place-items: center; }
+.email-turnstile-shell { width: 150px; min-height: 140px; max-width: 100%; display: grid; place-items: center; }
 .returning-passkey-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
 .returning-passkey-row > div { display: grid; gap: 4px; }
 .returning-passkey-row b { font-size: 16px; font-weight: 400; }

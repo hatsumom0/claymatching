@@ -1466,6 +1466,7 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
   assert.match(html, /passkey-steps/);
   assert.match(html, /data-email-signin-form/);
   assert.match(html, /data-email-turnstile/);
+  assert.match(html, /data-email-turnstile-status[^>]*role="status"[^>]*aria-live="polite"/);
   assert.match(html, /data-email-turnstile-status/);
   assert.match(html, /data-email-otp-entry/);
   assert.match(html, /data-verify-email-code/);
@@ -1541,9 +1542,10 @@ test("claymatching account UI includes persistent profile, Clayno, and sign-out 
 });
 
 test("claymatching email OTP uses its own single-use Turnstile proof", async () => {
-  const [html, script] = await Promise.all([
+  const [html, script, styles] = await Promise.all([
     readFile(new URL("../site/claymatching/index.html", import.meta.url), "utf8"),
     readFile(new URL("../site/claymatching/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../site/claymatching/styles.css", import.meta.url), "utf8"),
   ]);
   const emailRequest = script.match(/async function requestEmailCode\(event\)[\s\S]*?(?=\nasync function verifyEmailCode)/)?.[0] || "";
   const holderWidget = script.match(/async function renderTurnstile\(\)[\s\S]*?(?=\nasync function submitConsent)/)?.[0] || "";
@@ -1555,10 +1557,14 @@ test("claymatching email OTP uses its own single-use Turnstile proof", async () 
   assert.match(script, /if \(!emailTurnstileRenderPromise\)/);
   assert.match(script, /emailTurnstileRenderPromise = createEmailTurnstile\(\)\.finally/);
   assert.match(script, /action: "email_otp"/);
-  assert.match(script, /appearance: "interaction-only"/);
+  assert.match(script, /execution: "render"/);
+  assert.match(script, /appearance: "always"/);
   assert.match(script, /size: "compact"/);
-  assert.match(emailRequest, /const captchaProof = emailCaptchaToken/);
+  assert.match(styles, /\.email-turnstile-shell\s*\{[^}]*width:\s*150px[^}]*min-height:\s*140px/);
+  assert.match(script, /window\.turnstile\.getResponse\(emailTurnstileWidgetId\)/);
+  assert.match(emailRequest, /const captchaProof = readEmailCaptchaToken\(\)/);
   assert.match(emailRequest, /captchaToken: captchaProof/);
+  assert.match(emailRequest, /readableErrorMessage\(error, "That email could not receive a sign-in code\."\)/);
   assert.match(emailRequest, /finally \{[\s\S]*resetEmailTurnstile\(\)/);
   assert.match(script, /window\.turnstile\.reset\(emailTurnstileWidgetId\)/);
   assert.match(holderWidget, /captchaToken = token/);

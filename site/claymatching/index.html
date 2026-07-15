@@ -17,7 +17,7 @@
       type="font/woff2"
       crossorigin
     />
-    <link rel="stylesheet" href="/claymatching/styles.css?v=20260715-1" />
+    <link rel="stylesheet" href="/claymatching/styles.css?v=20260715-2" />
   </head>
   <body>
     <a class="skip-link" href="#main-content">skip to the board</a>
@@ -85,7 +85,7 @@
                 <form class="email-signin-form" data-email-signin-form>
                   <label><span>Private email</span><input name="email" type="email" autocomplete="email" placeholder="you@example.com" required /></label>
                   <div class="email-human-check">
-                    <small data-email-turnstile-status>Preparing the quick human check…</small>
+                    <small data-email-turnstile-status role="status" aria-live="polite" aria-atomic="true">Complete the human check below.</small>
                     <div class="email-turnstile-shell" data-email-turnstile aria-label="Email sign-in human check"></div>
                   </div>
                   <button class="clay-button clay-button-cream" type="submit">email me a code</button>
@@ -647,6 +647,6 @@
       crossorigin="anonymous"
     ></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
-    <script type="module" src="/claymatching/app.js?v=20260715-1"></script>
+    <script type="module" src="/claymatching/app.js?v=20260715-2"></script>
   </body>
 </html>

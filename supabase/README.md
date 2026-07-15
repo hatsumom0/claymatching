@@ -73,6 +73,7 @@ In the Supabase dashboard for `jfpatuhroezchwjtsaga`:
 1. Authentication → URL Configuration
    - Site URL: `https://claymatching.luna21e8.xyz`
    - Redirect URL: `https://claymatching.luna21e8.xyz/`
+   - Staging redirect URL: `https://claymatching.vfsp2wqysh.workers.dev/`
 2. Authentication → Sign In / Providers → Email
    - Enable Email.
    - Enable new email signups.
@@ -96,6 +97,18 @@ In the Supabase dashboard for `jfpatuhroezchwjtsaga`:
    - Display name: `Claymatching`
    - RP ID: `claymatching.luna21e8.xyz`
    - Origin: `https://claymatching.luna21e8.xyz`
+6. Authentication → Bot and Abuse Protection
+   - Enable Cloudflare Turnstile.
+   - Use the **secret key** from the same widget as the public site key listed
+     above. Supabase, not the browser, validates this secret for email OTP.
+7. In the Cloudflare Turnstile widget's hostname list, allow both:
+   - `claymatching.luna21e8.xyz`
+   - `claymatching.vfsp2wqysh.workers.dev`
+8. Project Settings → Authentication → SMTP Settings
+   - Keep custom SMTP enabled with the saved Resend credentials.
+   - Use a sender address on the already verified `luna21e8.xyz` domain.
+   - Never place the Resend API key or SMTP password in this repository or in
+     the browser. Resend configuration lives in Supabase, not the Worker.
 
 The production browser app accepts Supabase's six-digit email OTP. The HTML
 files under `supabase/templates/` configure local Supabase only; Supabase's
