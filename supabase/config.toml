@@ -2,7 +2,10 @@ project_id = "jfpatuhroezchwjtsaga"
 
 [auth]
 site_url = "https://claymatching.luna21e8.xyz/"
-additional_redirect_urls = ["https://claymatching.luna21e8.xyz/"]
+additional_redirect_urls = [
+  "https://claymatching.luna21e8.xyz/",
+  "https://claymatching.vfsp2wqysh.workers.dev/**",
+]
 enable_signup = true
 enable_manual_linking = true
 
@@ -15,6 +18,10 @@ enable_confirmations = true
 max_frequency = "1m"
 otp_length = 6
 
+[auth.email.template.confirmation]
+subject = "Your Claymatching sign-in code"
+content_path = "./supabase/templates/confirmation.html"
+
 [auth.email.template.magic_link]
 subject = "Your Claymatching sign-in code"
 content_path = "./supabase/templates/magic_link.html"
@@ -25,6 +32,13 @@ content_path = "./supabase/templates/email_change.html"
 
 [auth.web3.solana]
 enabled = true
+
+# Apple is enabled in production. The client ID is public; the OAuth secret
+# remains dashboard-managed and must never be committed. Declaring this block
+# prevents `supabase config push` from silently disabling the hosted provider.
+[auth.external.apple]
+enabled = true
+client_id = "xyz.luna21e8.claymatching.web"
 
 [auth.mfa.totp]
 enroll_enabled = true
@@ -38,6 +52,4 @@ rp_display_name = "Claymatching"
 rp_id = "claymatching.luna21e8.xyz"
 rp_origins = ["https://claymatching.luna21e8.xyz"]
 
-# Apple is enabled in the hosted dashboard only after its Services ID and
-# rotating client secret are available. Apple users are provisional until the
-# signed Solana holder proof succeeds. Never commit the Apple secret here.
+# Apple users are provisional until the signed Solana holder proof succeeds.

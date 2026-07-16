@@ -78,11 +78,16 @@ In the Supabase dashboard for `jfpatuhroezchwjtsaga`:
    - Enable Email.
    - Enable new email signups.
    - Require email confirmation.
-3. Authentication → Email Templates → Magic Link
-   - Subject: `Your Claymatching sign-in code`
-   - Make sure the body visibly includes `{{ .Token }}`. That variable is the
-     six-digit code accepted by the onboarding form. A minimal production body
-     is:
+3. Authentication → Email Templates
+   - Update **both** `Confirm sign up` and `Magic link or OTP`. New or still
+     unconfirmed addresses use the first template; confirmed returning users
+     use the second.
+   - Use the subject `Your Claymatching sign-in code` for both templates.
+   - Replace each body with code-only HTML that visibly includes `{{ .Token }}`.
+     Remove `{{ .ConfirmationURL }}`, `{{ .TokenHash }}`, redirect-built links,
+     `<a>` tags, and `href` attributes. Adding a token without removing the
+     default link would send both.
+   - A minimal production body for both templates is:
 
      ```html
      <h2>Your Claymatching sign-in code</h2>
@@ -90,6 +95,8 @@ In the Supabase dashboard for `jfpatuhroezchwjtsaga`:
      <p style="font-size: 32px; font-weight: 800; letter-spacing: 0.3em;">{{ .Token }}</p>
      <p>This code expires shortly and can be used once.</p>
      ```
+   - `Change email address` must also remain code-only. It may include
+     `{{ .NewEmail }}` and `{{ .Token }}`, but no confirmation URL or link.
 4. Authentication → Settings
    - Enable manual identity linking.
 5. Authentication → Passkeys
@@ -110,11 +117,12 @@ In the Supabase dashboard for `jfpatuhroezchwjtsaga`:
    - Never place the Resend API key or SMTP password in this repository or in
      the browser. Resend configuration lives in Supabase, not the Worker.
 
-The production browser app accepts Supabase's six-digit email OTP. The HTML
-files under `supabase/templates/` configure local Supabase only; Supabase's
-hosted project must be updated on its Email Templates dashboard page. Custom
-SMTP is required for dependable production delivery. Switching back to PKCE
-would also require token-hash callback links.
+The production browser app accepts Supabase's six-digit email OTP for both
+first-time confirmation and returning sign-in. The HTML files under
+`supabase/templates/` configure local Supabase only; Supabase's hosted project
+must be updated on its Email Templates dashboard page. Custom SMTP is required
+for dependable production delivery. Switching back to PKCE would also require
+token-hash callback links.
 
 Do not change the passkey RP ID after holders enroll passkeys; passkeys are bound
 to it.

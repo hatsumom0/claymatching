@@ -2542,8 +2542,8 @@ async function linkEmailToHolder() {
   await renderMudprintLinks();
   linkEmailCodeInput.focus();
   setMudprintStatus(previousLinkedEmail
-    ? "Use the six-digit code if the email contains one; secure address changes may send one to each inbox. If it contains a confirmation link instead, open that link."
-    : "Use the six-digit code if the email contains one. If it contains a secure confirmation link instead, open that link. No password is created.");
+    ? "Use the six-digit code sent to each listed inbox to confirm the secure address change."
+    : "Use the six-digit code from the email. No password is created.");
 }
 
 async function verifyLinkedEmailCode() {

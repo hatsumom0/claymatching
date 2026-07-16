@@ -2427,7 +2427,10 @@ test("claymatching custom backgrounds stay HTTPS-only and isolated", async () =>
   assert.match(config, /enable_manual_linking = true/);
   assert.match(config, /\[auth\.passkey\]\s+enabled = true/);
   assert.match(config, /rp_id = "claymatching\.luna21e8\.xyz"/);
+  assert.match(config, /https:\/\/claymatching\.vfsp2wqysh\.workers\.dev\/\*\*/);
+  assert.match(config, /\[auth\.external\.apple\][\s\S]*enabled = true[\s\S]*client_id = "xyz\.luna21e8\.claymatching\.web"/);
   assert.match(config, /\[auth\.email\][\s\S]*enable_signup = true/);
+  assert.match(config, /\[auth\.email\.template\.confirmation\][\s\S]*confirmation\.html/);
   assert.match(config, /\[auth\.email\.template\.magic_link\][\s\S]*magic_link\.html/);
   assert.match(config, /\[auth\.email\.template\.email_change\][\s\S]*email_change\.html/);
 });
@@ -2457,16 +2460,18 @@ test("claymatching separates profile and post artwork with immutable post snapsh
 });
 
 test("claymatching passwordless email templates deliver six-digit codes", async () => {
-  const [magicLinkTemplate, emailChangeTemplate] = await Promise.all([
+  const [confirmationTemplate, magicLinkTemplate, emailChangeTemplate] = await Promise.all([
+    readFile(new URL("../supabase/templates/confirmation.html", import.meta.url), "utf8"),
     readFile(new URL("../supabase/templates/magic_link.html", import.meta.url), "utf8"),
     readFile(new URL("../supabase/templates/email_change.html", import.meta.url), "utf8"),
   ]);
 
-  assert.match(magicLinkTemplate, /\{\{ \.Token \}\}/);
-  assert.doesNotMatch(magicLinkTemplate, /ConfirmationURL/);
+  for (const template of [confirmationTemplate, magicLinkTemplate, emailChangeTemplate]) {
+    assert.match(template, /\{\{ \.Token \}\}/);
+    assert.doesNotMatch(template, /ConfirmationURL|TokenHash|RedirectTo|<a\b|href\s*=/i);
+  }
   assert.match(emailChangeTemplate, /\{\{ \.Token \}\}/);
   assert.match(emailChangeTemplate, /\{\{ \.NewEmail \}\}/);
-  assert.doesNotMatch(emailChangeTemplate, /ConfirmationURL/);
 });
 
 test("claymatching authentication guidance documents the split posting and DM capability model", async () => {
